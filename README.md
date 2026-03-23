@@ -1,5 +1,5 @@
 # Muro di Sostegno - Analisi Statica e Sismica
-
+![alt text](percorso/socialMuro.png)
 Un'applicazione web interattiva basata su Streamlit per l'analisi e la verifica geotecnica di muri di sostegno in calcestruzzo armato. Il tool esegue calcoli di spinta delle terre, verifiche a ribaltamento e scorrimento, e controlli delle pressioni di contatto, integrando condizioni statiche, sismiche (metodo pseudo-statico) e la presenza di falde acquifere.
 
 ## 📌 Caratteristiche
