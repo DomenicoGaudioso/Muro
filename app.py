@@ -71,12 +71,27 @@ with st.sidebar:
 # Calcolo
 # ---------------------------------------------------------------------------
 d = DatiMuro(
-    H, q, gamma_cls, B, B_punta, B_tallone,
-    t_base, t_fusto_top, t_fusto_bot,
-    mu_base, q_amm,
-    h_fronte, falda_retro, falda_fronte,
-    kh, kv, delta_muro, include_passivo, stratigrafia_csv,
+    H=H, 
+    q=q, 
+    gamma_cls=gamma_cls, 
+    B=B, 
+    B_punta=B_punta, 
+    B_tallone=B_tallone,
+    t_base=t_base, 
+    t_fusto_top=t_fusto_top, 
+    t_fusto_bot=t_fusto_bot,
+    mu_base=mu_base, 
+    q_amm=q_amm,
+    h_fronte=h_fronte, 
+    falda_retro=falda_retro, 
+    falda_fronte=falda_fronte,
+    kh=kh, 
+    kv=kv, 
+    delta_muro=delta_muro, 
+    include_passivo=include_passivo, 
+    stratigrafia_csv=stratigrafia_csv
 )
+
 err = valida_dati(d)
 if err:
     for e in err:
