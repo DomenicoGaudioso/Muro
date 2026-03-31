@@ -10,21 +10,25 @@ from src import (
 
 DEFAULTS = {
     'H': 5.0, 'q': 10.0, 'gamma_cls': 24.0,
-    'B': 3.5, 'B_punta': 1.0, 'B_tallone': 2.5,  
+    'B': 3.5, 'B_punta': 1.0, 'B_tallone': 2.5,
     't_base': 0.5, 't_fusto_top': 0.30, 't_fusto_bot': 0.50,
     'mu_base': 0.55, 'q_amm': 250.0,
     'h_fronte': 0.5, 'falda_retro': 99.0, 'falda_fronte': 99.0,
     'kh': 0.15, 'kv': 0.05, 'delta_muro': 20.0,
     'include_passivo': True,
     'stratigrafia_csv': DEFAULT_STRAT,
+    'ha_tirante': False,
+    't_quota': 4.0,
+    't_inclinazione': 15.0,
+    't_tiro': 150.0
 }
 
 st.set_page_config(page_title='Muro di sostegno NTC', layout='wide')
 st.title('Muro - Analisi Avanzata NTC 2008 / MAX')
-st.caption('Logica geotecnica aggiornata agli stati limite EQU/GEO. Mantenuti export e visualizzazioni originali.')
+st.caption('Logica geotecnica aggiornata agli stati limite EQU/GEO. Calcolo Rigoroso Capacità Portante e Tiranti.')
 
 # ---------------------------------------------------------------------------
-# Sidebar: input (Tutti i tuoi controlli originali)
+# Sidebar: input
 # ---------------------------------------------------------------------------
 with st.sidebar:
     st.header('Import / Export input')
@@ -53,7 +57,16 @@ with st.sidebar:
     gamma_cls = st.number_input('Peso di volume cls [kN/m³]', 20.0, 28.0, float(defaults['gamma_cls']), 0.5)
     mu_base = st.number_input('Coefficiente attrito base μ [-]', 0.0, 1.2, float(defaults['mu_base']), 0.05)
     delta_muro = st.number_input('Attrito Terra-Muro δ [°]', 0.0, 45.0, float(defaults['delta_muro']), 1.0)
-    q_amm = st.number_input('q ammissibile [kPa]', 50.0, 1000.0, float(defaults['q_amm']), 10.0)
+    q_amm = st.number_input('q ammissibile (riferimento) [kPa]', 50.0, 1000.0, float(defaults['q_amm']), 10.0)
+
+    st.header('Ancoraggi (Tiranti)')
+    ha_tirante = st.checkbox('Inserisci Tirante di ancoraggio', value=bool(defaults['ha_tirante']))
+    if ha_tirante:
+        t_quota = st.number_input('Quota applicazione (dal fondo scavo) [m]', 0.0, float(H + t_base), float(defaults['t_quota']), 0.1)
+        t_tiro = st.number_input('Tiro di progetto (per m lineare) [kN/m]', 0.0, 1000.0, float(defaults['t_tiro']), 10.0)
+        t_inclinazione = st.number_input('Inclinazione rispetto orizzontale [°]', 0.0, 60.0, float(defaults['t_inclinazione']), 1.0)
+    else:
+        t_quota, t_tiro, t_inclinazione = 0.0, 0.0, 0.0
 
     st.header('Sismica pseudo-statica')
     kh = st.number_input('kh [-]', 0.0, 1.0, float(defaults['kh']), 0.01)
@@ -89,7 +102,11 @@ d = DatiMuro(
     kv=kv, 
     delta_muro=delta_muro, 
     include_passivo=include_passivo, 
-    stratigrafia_csv=stratigrafia_csv
+    stratigrafia_csv=stratigrafia_csv,
+    ha_tirante=ha_tirante,
+    t_quota=t_quota,
+    t_inclinazione=t_inclinazione,
+    t_tiro=t_tiro
 )
 
 err = valida_dati(d)
@@ -103,55 +120,52 @@ df_sintesi = tabella_sintesi(d, r)
 current = {k: v for k, v in d.__dict__.items()}
 
 # ---------------------------------------------------------------------------
-# Metriche principali (Le tue 6 colonne originali!)
+# Metriche principali (Layout a 5 colonne, per non avere errori di variabili non definite)
 # ---------------------------------------------------------------------------
-st.header('Ancoraggi (Tiranti)')
-ha_tirante = st.checkbox('Inserisci Tirante di ancoraggio', value=False)
-if ha_tirante:
-    t_quota = st.number_input('Quota applicazione (dal fondo) [m]', 0.0, float(H + t_base), float(H + t_base - 1.0), 0.1)
-    t_tiro = st.number_input('Tiro di progetto (per m lineare) [kN/m]', 0.0, 1000.0, 150.0, 10.0)
-    t_inclinazione = st.number_input('Inclinazione rispetto orizzontale [°]', 0.0, 60.0, 15.0, 1.0)
-else:
-    t_quota, t_tiro, t_inclinazione = 0.0, 0.0, 0.0
-
-# Modifica le Metriche Principali (niente più q_amm):
-c1, c2, c3, c4 = st.columns(4)
-c1.metric('FS Ribaltamento', f"{r['st_EQU']['FS_rib']:.2f}")
-c2.metric('FS Scorrimento', f"{r['statico']['FS_scorr']:.2f}")
-
-# La nuova metrica analitica per il terreno
-fs_portanza = r['statico']['FS_portanza']
-q_lim_calc = r['statico']['q_lim']
-c3.metric(
-    'FS Portanza (Hansen)', 
-    f"{fs_portanza:.2f}", 
-    delta="Soddisfatto" if fs_portanza >= 1.0 else "Non Soddisfatto",
-    delta_color="normal" if fs_portanza >= 1.0 else "inverse"
-)
-c4.metric('q_lim Calcolato [kPa]', f"{q_lim_calc:.1f}")
+c1, c2, c3, c4, c5 = st.columns(5)
+c1.metric('FS Ribaltamento (EQU)', f"{r['st_EQU']['FS_rib']:.2f}")
+c2.metric('FS Scorrimento (GEO)', f"{r['statico']['FS_scorr']:.2f}")
 
 qmax_val = r['statico']['qmax']
-delta_q = qmax_val - d.q_amm
+c3.metric('q_max [kPa]', f"{qmax_val:.1f}")
+
+q_lim_val = r['statico']['q_lim']
+c4.metric('q_lim (Hansen) [kPa]', f"{q_lim_val:.1f}")
+
+fs_port = r['statico']['FS_portanza']
 c5.metric(
-    'qmax GEO [kPa]',
-    f"{qmax_val:.1f}",
-    delta=f"{delta_q:+.1f} vs q_amm",
-    delta_color='inverse',
+    'FS Portanza',
+    f"{fs_port:.2f}",
+    delta="Soddisfatto" if fs_port >= 1.0 else "Non Soddisfatto",
+    delta_color="normal" if fs_port >= 1.0 else "inverse"
 )
-c6.metric('q_amm [kPa]', f"{d.q_amm:.1f}")
 
 # ---------------------------------------------------------------------------
-# Le tue Tab Originali
+# Tab
 # ---------------------------------------------------------------------------
 t1, t2, t3, t4, t5 = st.tabs([
-    '📐 Cruscotto Base', '📊 Output Pressioni', '🔗 Analisi Tiranti', '🌍 Stabilità Globale Pendio', '⚠️ Warning'
+    '📐 Modello e Sintesi (Cruscotto)', 
+    '📊 Output Plotly (Pressioni)', 
+    '🔗 Analisi Tiranti', 
+    '🌍 Stabilità Globale Pendio', 
+    '⚠️ Warning e Note NTC'
 ])
 
 with t1:
-    st.subheader('Tabella di sintesi')
+    st.subheader('Geometria e Stratigrafia di calcolo')
+    col_plot, col_df = st.columns([2, 1])
+    with col_plot:
+        st.plotly_chart(figura_geometria(d), use_container_width=True)
+    with col_df:
+        st.markdown("**Stratigrafia impostata**")
+        st.dataframe(r['stratigrafia'], use_container_width=True)
+
+    st.divider()
+
+    st.subheader('Tabella di Sintesi')
     st.dataframe(df_sintesi, use_container_width=True)
 
-    st.subheader('Download')
+    st.markdown("**Download Output**")
     col_a, col_b, col_c, col_d = st.columns(4)
     with col_a:
         st.download_button('Salva input JSON', export_json(current), 'muro_input.json', 'application/json')
@@ -163,15 +177,29 @@ with t1:
         st.download_button('Sintesi CSV (completa)', df_sintesi.to_csv(index=False).encode('utf-8'), 'muro_sintesi.csv', 'text/csv')
 
 with t2:
-    st.dataframe(r['stratigrafia'], use_container_width=True)
+    st.subheader("Diagramma delle pressioni")
+    st.plotly_chart(figura_output(r), use_container_width=True)
 
 with t3:
-    st.plotly_chart(figura_geometria(d), use_container_width=True)
+    st.header("Effetto dei Tiranti di Ancoraggio")
+    if d.ha_tirante:
+        st.success("Tirante di ancoraggio attivo nel calcolo.")
+        st.markdown(f"""
+        **Dati di progetto:**
+        - Tiro (T): **{d.t_tiro} kN/m**
+        - Quota di applicazione: **{d.t_quota} m** dal fondo base
+        - Inclinazione: **{d.t_inclinazione}°** verso il basso
+
+        **Azioni stabilizzanti introdotte:**
+        Il tirante introduce una componente orizzontale che si oppone allo scorrimento, una componente verticale che incrementa lo sforzo normale (e quindi l'attrito di base) e un momento stabilizzante che contrasta il ribaltamento.
+        """)
+    else:
+        st.info("Nessun tirante inserito. Spunta 'Inserisci Tirante di ancoraggio' nella barra laterale per valutare l'aumento della stabilità globale.")
 
 with t4:
     st.header("Analisi di Stabilità Globale")
     st.markdown("Questa sezione implementerà la ricerca del cerchio di scivolamento critico che coinvolge il sistema terreno-muro.")
-    st.info("🚧 Modulo in fase di espansione: L'implementazione completa del metodo di Bishop/Fellenius con griglia di ricerca automatica per il fattore di sicurezza minimo sarà configurata nel prossimo step.")
+    st.info("🚧 Modulo in fase di espansione: L'implementazione completa del metodo di Fellenius/Bishop con griglia di ricerca automatica per il fattore di sicurezza minimo verrà configurata a breve come modulo dedicato.")
 
 with t5:
     st.subheader('Warning tecnici')
@@ -180,7 +208,7 @@ with t5:
         for w in warnings:
             st.warning(w)
     else:
-        st.success('Nessun warning: tutte le verifiche NTC sono soddisfatte.')
+        st.success('Nessun warning: tutte le verifiche NTC (Ribaltamento, Scorrimento, Portanza) sono soddisfatte.')
 
     st.subheader('Note automatiche')
     note = genera_note(d, r)
@@ -188,10 +216,11 @@ with t5:
         for n in note:
             st.info(n)
 
-    st.subheader('Nuove Ipotesi di calcolo NTC (MAX)')
+    st.subheader('Ipotesi di calcolo NTC (MAX)')
     st.markdown("""
-**Metodo di calcolo adottato (Aggiornato)**
-- **Spinta attiva (Mononobe-Okabe):** A differenza del calcolo originale (Rankine), ora viene impiegato l'approccio di Coulomb / Mononobe-Okabe, che consente di considerare la componente di attrito terra-muro `δ`.
-- **Combinazioni NTC 2008/2018:** La valutazione viene scissa rigorosamente fra Stato Limite EQU (Ribaltamento, con massimizzazione delle spinte) e Stato Limite GEO (Scorrimento e Capacità Portante).
-- **Forze d'inerzia:** Nel calcolo dei momenti destabilizzanti sismici e negli sforzi di taglio alla base sono ora incluse esplicitamente le masse del fusto, della fondazione e della "zavorra" (terreno sopra il tallone), come indicato nei manuali del software MAX.
+**Metodo di calcolo adottato:**
+- **Spinta attiva (Mononobe-Okabe):** Si impiega l'approccio di Coulomb / Mononobe-Okabe, che consente di considerare la componente di attrito terra-muro `δ`.
+- **Combinazioni NTC 2008/2018:** La valutazione viene scissa rigorosamente fra Stato Limite EQU e Stato Limite GEO.
+- **Forze d'inerzia:** Nel calcolo dei momenti destabilizzanti sismici sono incluse esplicitamente le masse del fusto, della fondazione e della zavorra.
+- **Carico Limite Rigoroso:** Non si usa più un valore "ammissibile" fisso, ma si ricalcola la reale Capacità Portante per ogni combinazione tramite la formula trinomia di Brinch-Hansen, correggendo l'inclinazione dei carichi e riducendo la base efficace $B'$ a causa dell'eccentricità.
     """)
