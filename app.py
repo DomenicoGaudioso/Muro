@@ -10,21 +10,21 @@ from src import (
 
 DEFAULTS = {
     'H': 5.0, 'q': 10.0, 'gamma_cls': 24.0,
-    'B': 3.5, 'B_punta': 1.0, 'B_tallone': 2.5,
+    'B': 3.5, 'B_punta': 1.0, 'B_tallone': 2.0,
     't_base': 0.5, 't_fusto_top': 0.30, 't_fusto_bot': 0.50,
     'mu_base': 0.55, 'q_amm': 250.0,
     'h_fronte': 0.5, 'falda_retro': 99.0, 'falda_fronte': 99.0,
-    'kh': 0.15, 'kv': 0.05,
+    'kh': 0.15, 'kv': 0.05, 'delta_muro': 20.0,
     'include_passivo': True,
     'stratigrafia_csv': DEFAULT_STRAT,
 }
 
-st.set_page_config(page_title='Muro di sostegno', layout='wide')
-st.title('Muro - Statico, sismico e falda')
-st.caption('v1.3: warning tecnici, note automatiche, grafici migliorati.')
+st.set_page_config(page_title='Muro di sostegno NTC', layout='wide')
+st.title('Muro - Analisi Avanzata NTC 2008 / MAX')
+st.caption('Logica geotecnica aggiornata agli stati limite EQU/GEO. Mantenuti export e visualizzazioni originali.')
 
 # ---------------------------------------------------------------------------
-# Sidebar: input
+# Sidebar: input (Tutti i tuoi controlli originali)
 # ---------------------------------------------------------------------------
 with st.sidebar:
     st.header('Import / Export input')
@@ -52,6 +52,7 @@ with st.sidebar:
     q = st.number_input('Sovraccarico q [kPa]', 0.0, 100.0, float(defaults['q']), 1.0)
     gamma_cls = st.number_input('Peso di volume cls [kN/m³]', 20.0, 28.0, float(defaults['gamma_cls']), 0.5)
     mu_base = st.number_input('Coefficiente attrito base μ [-]', 0.0, 1.2, float(defaults['mu_base']), 0.05)
+    delta_muro = st.number_input('Attrito Terra-Muro δ [°]', 0.0, 45.0, float(defaults['delta_muro']), 1.0)
     q_amm = st.number_input('q ammissibile [kPa]', 50.0, 1000.0, float(defaults['q_amm']), 10.0)
 
     st.header('Sismica pseudo-statica')
@@ -74,7 +75,7 @@ d = DatiMuro(
     t_base, t_fusto_top, t_fusto_bot,
     mu_base, q_amm,
     h_fronte, falda_retro, falda_fronte,
-    kh, kv, include_passivo, stratigrafia_csv,
+    kh, kv, delta_muro, include_passivo, stratigrafia_csv,
 )
 err = valida_dati(d)
 if err:
@@ -87,30 +88,29 @@ df_sintesi = tabella_sintesi(d, r)
 current = {k: v for k, v in d.__dict__.items()}
 
 # ---------------------------------------------------------------------------
-# Metriche principali (6 colonne: 4 FS + qmax + q_amm)
+# Metriche principali (Le tue 6 colonne originali!)
 # ---------------------------------------------------------------------------
 c1, c2, c3, c4, c5, c6 = st.columns(6)
-c1.metric('FS rib. statico',   f"{r['statico']['FS_rib']:.2f}")
-c2.metric('FS scorr. statico', f"{r['statico']['FS_scorr']:.2f}")
+c1.metric('FS rib. statico (EQU)',   f"{r['st_EQU']['FS_rib']:.2f}")
+c2.metric('FS scorr. statico (GEO)', f"{r['statico']['FS_scorr']:.2f}")
 c3.metric('FS rib. sismico',   f"{r['sismico']['FS_rib']:.2f}")
 c4.metric('FS scorr. sismico', f"{r['sismico']['FS_scorr']:.2f}")
 
 qmax_val = r['statico']['qmax']
 delta_q = qmax_val - d.q_amm
-# delta positivo = sforamento, negativo = entro i limiti
 c5.metric(
-    'qmax [kPa]',
+    'qmax GEO [kPa]',
     f"{qmax_val:.1f}",
     delta=f"{delta_q:+.1f} vs q_amm",
-    delta_color='inverse',   # rosso se positivo (supera il limite), verde se negativo
+    delta_color='inverse',
 )
 c6.metric('q_amm [kPa]', f"{d.q_amm:.1f}")
 
 # ---------------------------------------------------------------------------
-# Tab
+# Le tue Tab Originali
 # ---------------------------------------------------------------------------
 t1, t2, t3, t4, t5 = st.tabs([
-    'Sintesi', 'Stratigrafia', 'Geometria Plotly', 'Output Plotly', 'Note tecniche',
+    'Sintesi e Download', 'Stratigrafia', 'Geometria Plotly', 'Output Plotly', 'Note e Warning NTC',
 ])
 
 with t1:
@@ -120,33 +120,13 @@ with t1:
     st.subheader('Download')
     col_a, col_b, col_c, col_d = st.columns(4)
     with col_a:
-        st.download_button(
-            'Salva input JSON',
-            export_json(current),
-            'muro_input.json',
-            'application/json',
-        )
+        st.download_button('Salva input JSON', export_json(current), 'muro_input.json', 'application/json')
     with col_b:
-        st.download_button(
-            'Sintesi CSV (statico)',
-            df_sintesi[['Parametro', 'Statico']].to_csv(index=False).encode('utf-8'),
-            'muro_sintesi_statico.csv',
-            'text/csv',
-        )
+        st.download_button('Sintesi CSV (statico)', df_sintesi[['Parametro', 'Statico (GEO/EQU)']].to_csv(index=False).encode('utf-8'), 'muro_sintesi_statico.csv', 'text/csv')
     with col_c:
-        st.download_button(
-            'Sintesi CSV (sismico)',
-            df_sintesi[['Parametro', 'Sismico']].to_csv(index=False).encode('utf-8'),
-            'muro_sintesi_sismico.csv',
-            'text/csv',
-        )
+        st.download_button('Sintesi CSV (sismico)', df_sintesi[['Parametro', 'Sismico kv+']].to_csv(index=False).encode('utf-8'), 'muro_sintesi_sismico.csv', 'text/csv')
     with col_d:
-        st.download_button(
-            'Sintesi CSV (completa)',
-            df_sintesi.to_csv(index=False).encode('utf-8'),
-            'muro_sintesi.csv',
-            'text/csv',
-        )
+        st.download_button('Sintesi CSV (completa)', df_sintesi.to_csv(index=False).encode('utf-8'), 'muro_sintesi.csv', 'text/csv')
 
 with t2:
     st.dataframe(r['stratigrafia'], use_container_width=True)
@@ -158,50 +138,24 @@ with t4:
     st.plotly_chart(figura_output(r), use_container_width=True)
 
 with t5:
-    # ---- Warning tecnici ----------------------------------------------------
     st.subheader('Warning tecnici')
     warnings = genera_warning(d, r)
     if warnings:
         for w in warnings:
             st.warning(w)
     else:
-        st.success('Nessun warning: tutte le verifiche sono soddisfatte.')
+        st.success('Nessun warning: tutte le verifiche NTC sono soddisfatte.')
 
-    # ---- Note automatiche ---------------------------------------------------
     st.subheader('Note automatiche')
     note = genera_note(d, r)
     if note:
         for n in note:
             st.info(n)
-    else:
-        st.info('Nessuna nota aggiuntiva.')
 
-    # ---- Ipotesi di calcolo -------------------------------------------------
-    st.subheader('Ipotesi di calcolo')
+    st.subheader('Nuove Ipotesi di calcolo NTC (MAX)')
     st.markdown("""
-**Metodo di calcolo adottato**
-
-- **Spinta attiva (Rankine):** la pressione orizzontale attiva è calcolata con il coefficiente di Rankine
-  `Ka = (1 − sin φ) / (1 + sin φ)` applicato alla tensione verticale efficace, con aggiunta della
-  pressione idrostatica e del contributo del sovraccarico superficiale `q`.
-
-- **Spinta passiva (Rankine):** la resistenza passiva a fronte è calcolata con
-  `Kp = (1 + sin φ) / (1 − sin φ)`, eventualmente ridotta per l'effetto inerziale sismico.
-
-- **Caso sismico (metodo pseudo-statico):** l'effetto del terremoto è rappresentato
-  da forze inerziali proporzionali ai parametri `kh` (orizzontale) e `kv` (verticale).
-  Il peso verticale è ridotto del fattore `(1 − kv)` e la spinta orizzontale è incrementata
-  dal termine `kh · σ'v`.
-
-- **Verifica a ribaltamento:** `FS_rib = Mresistente / Mribaltante`, con polo al piede del paramento.
-
-- **Verifica a scorrimento:** `FS_scorr = (μ · N + cu · B + Pp) / Pa`, dove `μ` è il coefficiente
-  di attrito alla base, `cu` è la coesione non drenata del terreno di fondazione, `B` è la larghezza
-  della fondazione e `Pp` è la resistenza passiva a fronte (se inclusa).
-
-- **Pressioni di contatto:** calcolate con la formula del nucleo centrale, assumendo distribuzione
-  lineare: `q = N/B · (1 ± 6e/B)`, dove `e` è l'eccentricità della risultante.
-
-- **Stratigrafia:** la tensione verticale efficace è integrata strato per strato, considerando
-  il peso di volume secco sopra la falda e il peso di volume saturo immerso sotto la falda.
+**Metodo di calcolo adottato (Aggiornato)**
+- **Spinta attiva (Mononobe-Okabe):** A differenza del calcolo originale (Rankine), ora viene impiegato l'approccio di Coulomb / Mononobe-Okabe, che consente di considerare la componente di attrito terra-muro `δ`.
+- **Combinazioni NTC 2008/2018:** La valutazione viene scissa rigorosamente fra Stato Limite EQU (Ribaltamento, con massimizzazione delle spinte) e Stato Limite GEO (Scorrimento e Capacità Portante).
+- **Forze d'inerzia:** Nel calcolo dei momenti destabilizzanti sismici e negli sforzi di taglio alla base sono ora incluse esplicitamente le masse del fusto, della fondazione e della "zavorra" (terreno sopra il tallone), come indicato nei manuali del software MAX.
     """)
