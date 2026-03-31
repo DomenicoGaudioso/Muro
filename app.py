@@ -3,7 +3,7 @@ import json
 import streamlit as st
 from src import (
     DatiMuro, DEFAULT_STRAT,
-    valida_dati, calcola_muro, tabella_sintesi,
+    valida_dati, calcola_muro, tabella_sintesi, tabella_sollecitazioni,
     figura_geometria, figura_output, export_json,
     genera_warning, genera_note,
 )
@@ -25,7 +25,7 @@ DEFAULTS = {
 
 st.set_page_config(page_title='Muro di sostegno NTC', layout='wide')
 st.title('Muro - Analisi Avanzata NTC 2008 / MAX')
-st.caption('Logica geotecnica aggiornata agli stati limite EQU/GEO. Calcolo Rigoroso Capacità Portante e Tiranti.')
+st.caption('Logica geotecnica e strutturale. Inclusione Tiranti e Sollecitazioni.')
 
 # ---------------------------------------------------------------------------
 # Sidebar: input
@@ -84,35 +84,16 @@ with st.sidebar:
 # Calcolo
 # ---------------------------------------------------------------------------
 d = DatiMuro(
-    H=H, 
-    q=q, 
-    gamma_cls=gamma_cls, 
-    B=B, 
-    B_punta=B_punta, 
-    B_tallone=B_tallone,
-    t_base=t_base, 
-    t_fusto_top=t_fusto_top, 
-    t_fusto_bot=t_fusto_bot,
-    mu_base=mu_base, 
-    q_amm=q_amm,
-    h_fronte=h_fronte, 
-    falda_retro=falda_retro, 
-    falda_fronte=falda_fronte,
-    kh=kh, 
-    kv=kv, 
-    delta_muro=delta_muro, 
-    include_passivo=include_passivo, 
-    stratigrafia_csv=stratigrafia_csv,
-    ha_tirante=ha_tirante,
-    t_quota=t_quota,
-    t_inclinazione=t_inclinazione,
-    t_tiro=t_tiro
+    H=H, q=q, gamma_cls=gamma_cls, B=B, B_punta=B_punta, B_tallone=B_tallone,
+    t_base=t_base, t_fusto_top=t_fusto_top, t_fusto_bot=t_fusto_bot,
+    mu_base=mu_base, q_amm=q_amm, h_fronte=h_fronte, falda_retro=falda_retro, falda_fronte=falda_fronte,
+    kh=kh, kv=kv, delta_muro=delta_muro, include_passivo=include_passivo, stratigrafia_csv=stratigrafia_csv,
+    ha_tirante=ha_tirante, t_quota=t_quota, t_inclinazione=t_inclinazione, t_tiro=t_tiro
 )
 
 err = valida_dati(d)
 if err:
-    for e in err:
-        st.error(e)
+    for e in err: st.error(e)
     st.stop()
 
 r = calcola_muro(d)
@@ -120,107 +101,69 @@ df_sintesi = tabella_sintesi(d, r)
 current = {k: v for k, v in d.__dict__.items()}
 
 # ---------------------------------------------------------------------------
-# Metriche principali (Layout a 5 colonne, per non avere errori di variabili non definite)
+# Metriche principali
 # ---------------------------------------------------------------------------
 c1, c2, c3, c4, c5 = st.columns(5)
-c1.metric('FS Ribaltamento (EQU)', f"{r['st_EQU']['FS_rib']:.2f}")
-c2.metric('FS Scorrimento (GEO)', f"{r['statico']['FS_scorr']:.2f}")
+c1.metric('FS Ribaltamento', f"{r['st_EQU']['FS_rib']:.2f}")
+c2.metric('FS Scorrimento', f"{r['statico']['FS_scorr']:.2f}")
 
 qmax_val = r['statico']['qmax']
 c3.metric('q_max [kPa]', f"{qmax_val:.1f}")
 
 q_lim_val = r['statico']['q_lim']
-c4.metric('q_lim (Hansen) [kPa]', f"{q_lim_val:.1f}")
+c4.metric('q_lim (Hansen)', f"{q_lim_val:.1f}")
 
 fs_port = r['statico']['FS_portanza']
-c5.metric(
-    'FS Portanza',
-    f"{fs_port:.2f}",
-    delta="Soddisfatto" if fs_port >= 1.0 else "Non Soddisfatto",
-    delta_color="normal" if fs_port >= 1.0 else "inverse"
-)
+c5.metric('FS Portanza', f"{fs_port:.2f}", delta="OK" if fs_port >= 1.0 else "NO", delta_color="normal" if fs_port >= 1.0 else "inverse")
 
 # ---------------------------------------------------------------------------
 # Tab
 # ---------------------------------------------------------------------------
 t1, t2, t3, t4, t5 = st.tabs([
-    '📐 Modello e Sintesi (Cruscotto)', 
-    '📊 Output Plotly (Pressioni)', 
-    '🔗 Analisi Tiranti', 
-    '🌍 Stabilità Globale Pendio', 
-    '⚠️ Warning e Note NTC'
+    '📐 Cruscotto Globale', '📊 Output Pressioni', '🔗 Analisi Strutturale e Tiranti', '🌍 Stabilità Pendio', '⚠️ Note'
 ])
 
 with t1:
-    st.subheader('Geometria e Stratigrafia di calcolo')
+    st.subheader('Modello di Calcolo')
     col_plot, col_df = st.columns([2, 1])
     with col_plot:
         st.plotly_chart(figura_geometria(d), use_container_width=True)
     with col_df:
-        st.markdown("**Stratigrafia impostata**")
         st.dataframe(r['stratigrafia'], use_container_width=True)
 
     st.divider()
-
-    st.subheader('Tabella di Sintesi')
+    st.subheader('Verifiche Geotecniche (Sintesi)')
     st.dataframe(df_sintesi, use_container_width=True)
 
-    st.markdown("**Download Output**")
-    col_a, col_b, col_c, col_d = st.columns(4)
-    with col_a:
-        st.download_button('Salva input JSON', export_json(current), 'muro_input.json', 'application/json')
-    with col_b:
-        st.download_button('Sintesi CSV (statico)', df_sintesi[['Parametro', 'Statico (GEO/EQU)']].to_csv(index=False).encode('utf-8'), 'muro_sintesi_statico.csv', 'text/csv')
-    with col_c:
-        st.download_button('Sintesi CSV (sismico)', df_sintesi[['Parametro', 'Sismico kv+']].to_csv(index=False).encode('utf-8'), 'muro_sintesi_sismico.csv', 'text/csv')
-    with col_d:
-        st.download_button('Sintesi CSV (completa)', df_sintesi.to_csv(index=False).encode('utf-8'), 'muro_sintesi.csv', 'text/csv')
-
 with t2:
-    st.subheader("Diagramma delle pressioni")
+    st.subheader("Pressioni sul terreno")
     st.plotly_chart(figura_output(r), use_container_width=True)
 
 with t3:
-    st.header("Effetto dei Tiranti di Ancoraggio")
-    if d.ha_tirante:
-        st.success("Tirante di ancoraggio attivo nel calcolo.")
-        st.markdown(f"""
-        **Dati di progetto:**
-        - Tiro (T): **{d.t_tiro} kN/m**
-        - Quota di applicazione: **{d.t_quota} m** dal fondo base
-        - Inclinazione: **{d.t_inclinazione}°** verso il basso
+    st.header("Sollecitazioni Strutturali allo Spiccato")
+    st.markdown("Valori calcolati per il dimensionamento delle armature alla base del fusto (quota $y = t_{base}$). I valori includono il peso proprio del fusto, le inerzie sismiche, la spinta delle terre e l'eventuale ancoraggio.")
+    
+    df_sollec = tabella_sollecitazioni(r)
+    st.dataframe(df_sollec, use_container_width=True)
 
-        **Azioni stabilizzanti introdotte:**
-        Il tirante introduce una componente orizzontale che si oppone allo scorrimento, una componente verticale che incrementa lo sforzo normale (e quindi l'attrito di base) e un momento stabilizzante che contrasta il ribaltamento.
+    st.divider()
+    st.subheader("Effetto del Tirante di Ancoraggio")
+    if d.ha_tirante:
+        st.success("Tirante attivo. L'equilibrio strutturale beneficia del pretiro.")
+        st.markdown(f"""
+        - Tiro di progetto: **{d.t_tiro} kN/m**
+        - Quota: **{d.t_quota} m**
+        - Il momento flettente allo spiccato si è ridotto grazie al momento stabilizzante del tirante.
         """)
     else:
-        st.info("Nessun tirante inserito. Spunta 'Inserisci Tirante di ancoraggio' nella barra laterale per valutare l'aumento della stabilità globale.")
+        st.info("Nessun tirante inserito. Spunta la voce nella sidebar per valutare le riduzioni di Taglio e Momento flettente sul fusto.")
 
 with t4:
-    st.header("Analisi di Stabilità Globale")
-    st.markdown("Questa sezione implementerà la ricerca del cerchio di scivolamento critico che coinvolge il sistema terreno-muro.")
-    st.info("🚧 Modulo in fase di espansione: L'implementazione completa del metodo di Fellenius/Bishop con griglia di ricerca automatica per il fattore di sicurezza minimo verrà configurata a breve come modulo dedicato.")
+    st.header("Stabilità Globale del Pendio")
+    st.info("🚧 Modulo in fase di espansione: Ricerca del cerchio di scivolamento critico (Metodo di Fellenius/Bishop).")
 
 with t5:
-    st.subheader('Warning tecnici')
     warnings = genera_warning(d, r)
-    if warnings:
-        for w in warnings:
-            st.warning(w)
-    else:
-        st.success('Nessun warning: tutte le verifiche NTC (Ribaltamento, Scorrimento, Portanza) sono soddisfatte.')
-
-    st.subheader('Note automatiche')
+    for w in warnings: st.warning(w)
     note = genera_note(d, r)
-    if note:
-        for n in note:
-            st.info(n)
-
-    st.subheader('Ipotesi di calcolo NTC (MAX)')
-    st.markdown("""
-**Metodo di calcolo adottato:**
-- **Spinta attiva (Mononobe-Okabe):** Si impiega l'approccio di Coulomb / Mononobe-Okabe, che consente di considerare la componente di attrito terra-muro `δ`.
-- **Combinazioni NTC 2008/2018:** La valutazione viene scissa rigorosamente fra Stato Limite EQU e Stato Limite GEO.
-- **Forze d'inerzia:** Nel calcolo dei momenti destabilizzanti sismici sono incluse esplicitamente le masse del fusto, della fondazione e della zavorra.
-- **Carico Limite Rigoroso:** Non si usa più un valore "ammissibile" fisso, ma si ricalcola la reale Capacità Portante per ogni combinazione tramite la formula trinomia di Brinch-Hansen, correggendo l'inclinazione dei carichi e riducendo la base efficace $B'$ a causa dell'eccentricità.
-    """)
+    for n in note: st.info(n)
