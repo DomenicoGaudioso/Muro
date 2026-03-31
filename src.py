@@ -94,6 +94,41 @@ class DatiMuro:
     delta_muro: float = 20.0  # Attrito terra-muro (NOVITA' MAX)
     include_passivo: bool = True
     stratigrafia_csv: str = DEFAULT_STRAT
+    ha_tirante: bool = False
+    t_quota: float = 0.0 # Quota applicazione dal piano di posa [m]
+    t_inclinazione: float = 15.0 # Inclinazione verso il basso [°]
+    t_tiro: float = 0.0 # Forza di pretiro per metro lineare [kN/m]
+
+def fattori_capacita_portante(phi_deg):
+    """Calcola Nc, Nq, Ngamma (metodo Vesic/Hansen)"""
+    if phi_deg <= 0:
+        return 5.14, 1.0, 0.0
+    phi = math.radians(phi_deg)
+    Nq = math.exp(math.pi * math.tan(phi)) * (math.tan(math.radians(45 + phi_deg/2)))**2
+    Nc = (Nq - 1) / math.tan(phi)
+    Ngamma = 2 * (Nq + 1) * math.tan(phi)
+    return Nc, Nq, Ngamma
+
+def calcola_qlim_hansen(B_eff, V_tot, H_tot, gamma_fond, phi_fond, c_fond, q_sovraccarico):
+    """Calcolo Capacità Portante q_lim con eccentricità e inclinazione carichi"""
+    Nc, Nq, Ngamma = fattori_capacita_portante(phi_fond)
+    
+    # Fattori di inclinazione (i_c, i_q, i_gamma) - Formula semplificata di Hansen
+    m = (2 + B_eff/1000) / (1 + B_eff/1000) # (Assumendo L infinita per il muro)
+    
+    # V_tot non può essere nullo per il calcolo dell'inclinazione
+    V_calc = max(V_tot, 1e-9)
+    theta = math.atan(H_tot / V_calc)
+    
+    iq = (1 - 0.5 * H_tot / (V_calc + B_eff * c_fond * (1/math.tan(math.radians(max(phi_fond, 1))))))**5 if phi_fond > 0 else 1.0
+    igamma = (1 - 0.7 * H_tot / (V_calc + B_eff * c_fond * (1/math.tan(math.radians(max(phi_fond, 1))))))**5 if phi_fond > 0 else 1.0
+    ic = iq - (1 - iq) / (Nc * math.tan(math.radians(max(phi_fond, 1)))) if phi_fond > 0 else 1.0
+
+    term_c = c_fond * Nc * ic
+    term_q = q_sovraccarico * Nq * iq
+    term_gamma = 0.5 * gamma_fond * B_eff * Ngamma * igamma
+    
+    return term_c + term_q + term_gamma
 
 def ka_mo(phi_deg, delta_deg, kh, kv):
     """Calcolo K_A con Mononobe-Okabe (Metodo MAX)"""
@@ -214,6 +249,48 @@ def evaluate_ntc_combination(d: DatiMuro, df: pd.DataFrame, tipo: str, kh: float
     cu_base = float(df.iloc[-1]['cu_kPa']) / g_phi
     Rf = d.mu_base * V_tot + cu_base * d.B + Pp
     FS_scorr = Rf / max(H_tot, 1e-9)
+
+    # =================  EFFETTO TIRANTE =================
+    H_tirante, V_tirante, M_tirante = 0.0, 0.0, 0.0
+    if d.ha_tirante:
+        alpha_t = math.radians(d.t_inclinazione)
+        H_tirante = d.t_tiro * math.cos(alpha_t)
+        V_tirante = d.t_tiro * math.sin(alpha_t)
+        # Assumiamo che il tirante tiri verso monte, quindi stabilizza
+        x_tirante_testa = d.B_punta + d.t_fusto_bot # posizione approssimativa fusto
+        M_tirante = H_tirante * d.t_quota + V_tirante * x_tirante_testa
+
+    # Risultanti e Momenti rispetto alla punta (x=0, y=0)
+    V_tot = (W_base + W_fusto + W_heel + Wq) * (1.0 - kv) + Pv + V_tirante
+    H_tot = Ph + F_base + F_fusto + F_heel - H_tirante # Il tirante si oppone alla spinta
+    
+    M_stab = W_base * x_base + W_fusto * x_fusto + W_heel * x_heel + Wq * x_q + Pp * z_pp + Pv * d.B + M_tirante
+    M_destab = Ph * zbar_h + F_base * (d.t_base/2) + F_fusto * (d.t_base + d.H/2) + F_heel * (d.t_base + d.H/2)
+    
+    FS_rib = M_stab / max(M_destab, 1e-9)
+
+    # Scorrimento
+    cu_base = float(df.iloc[-1]['cu_kPa']) / g_phi
+    Rf = d.mu_base * V_tot + cu_base * d.B + Pp
+    FS_scorr = Rf / max(H_tot, 1e-9)
+
+    # ================= NUOVO: CAPACITA' PORTANTE RIGOROSA =================
+    M_net = max(M_destab - M_stab, 0) + (V_tot * d.B / 2.0)
+    e = abs(M_net / max(V_tot, 1e-9) - d.B / 2.0)
+    B_eff = d.B - 2*e # Larghezza ridotta di fondazione
+
+    q_med = V_tot / d.B
+    qmax = q_med * (1 + 6 * e / d.B)
+    
+    # Calcolo q_lim
+    lay_fond = df.iloc[-1]
+    phi_f = float(lay_fond['phi_deg']) / g_phi
+    c_f = float(lay_fond['cu_kPa']) / g_phi
+    gamma_f = float(lay_fond['gamma_dry'])
+    q_sovraccarico_fond = d.h_fronte * gamma_f # Sovraccarico a fianco della base
+
+    q_lim = calcola_qlim_hansen(B_eff, V_tot, max(H_tot, 0), gamma_f, phi_f, c_f, q_sovraccarico_fond)
+    FS_portanza = q_lim / max(qmax, 1e-9)
 
     # Schiacciamento / Pressioni
     M_net = M_destab - M_stab + (V_tot * d.B / 2.0)
