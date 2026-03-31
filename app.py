@@ -10,7 +10,7 @@ from src import (
 
 DEFAULTS = {
     'H': 5.0, 'q': 10.0, 'gamma_cls': 24.0,
-    'B': 3.5, 'B_punta': 1.0, 'B_tallone': 2.0,
+    'B': 3.5, 'B_punta': 1.0, 'B_tallone': 2.5,  
     't_base': 0.5, 't_fusto_top': 0.30, 't_fusto_bot': 0.50,
     'mu_base': 0.55, 'q_amm': 250.0,
     'h_fronte': 0.5, 'falda_retro': 99.0, 'falda_fronte': 99.0,
