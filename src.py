@@ -87,7 +87,6 @@ class DatiMuro:
     delta_muro: float = 20.0
     include_passivo: bool = True
     stratigrafia_csv: str = DEFAULT_STRAT
-    # Parametri Tirante
     ha_tirante: bool = False
     t_quota: float = 0.0
     t_inclinazione: float = 15.0
@@ -134,6 +133,7 @@ def integrate_pressures_ntc(df, H, falda, q_sur, delta_muro, kh=0.0, kv=0.0, gam
     sig_h, sig_v = np.array(sig_h), np.array(sig_v)
     Ph = np.trapezoid(sig_h, z)
     Pv = np.trapezoid(sig_v, z)
+    # zbar_h è la profondità del baricentro a partire dalla sommità (z=0)
     zbar_h = np.trapezoid(sig_h * z, z) / max(Ph, 1e-9) if Ph > 0 else 0.0
     return z, sig_h, Ph, Pv, zbar_h
 
@@ -150,11 +150,10 @@ def integrate_passive(df, h_front, falda_front, gamma_phi=1.0, gamma_G=1.0, kh=0
         sig.append(max((Kp - kh) * sv + u, 0.0))
     sig = np.array(sig)
     P = np.trapezoid(sig, z)
-    zbar = np.trapezoid(sig * z, z) / max(P, 1e-9)
-    return z, sig, P, zbar
+    zbar_p = np.trapezoid(sig * z, z) / max(P, 1e-9) if P > 0 else 0.0
+    return z, sig, P, zbar_p
 
 def fattori_capacita_portante(phi_deg):
-    """Calcola Nc, Nq, Ngamma (metodo Vesic/Hansen)"""
     if phi_deg <= 0: return 5.14, 1.0, 0.0
     phi = math.radians(phi_deg)
     Nq = math.exp(math.pi * math.tan(phi)) * (math.tan(math.radians(45 + phi_deg/2)))**2
@@ -163,69 +162,72 @@ def fattori_capacita_portante(phi_deg):
     return Nc, Nq, Ngamma
 
 def calcola_qlim_hansen(B_eff, V_tot, H_tot, gamma_fond, phi_fond, c_fond, q_sovraccarico):
-    """Calcolo Capacità Portante q_lim con eccentricità e inclinazione carichi"""
     Nc, Nq, Ngamma = fattori_capacita_portante(phi_fond)
     V_calc = max(V_tot, 1e-9)
-    
     iq = (1 - 0.5 * H_tot / (V_calc + B_eff * c_fond * (1/math.tan(math.radians(max(phi_fond, 1))))))**5 if phi_fond > 0 else 1.0
     igamma = (1 - 0.7 * H_tot / (V_calc + B_eff * c_fond * (1/math.tan(math.radians(max(phi_fond, 1))))))**5 if phi_fond > 0 else 1.0
     ic = iq - (1 - iq) / (Nc * math.tan(math.radians(max(phi_fond, 1)))) if phi_fond > 0 else 1.0
-
-    term_c = c_fond * Nc * ic
-    term_q = q_sovraccarico * Nq * iq
-    term_gamma = 0.5 * gamma_fond * B_eff * Ngamma * igamma
-    return term_c + term_q + term_gamma
+    return c_fond * Nc * ic + q_sovraccarico * Nq * iq + 0.5 * gamma_fond * B_eff * Ngamma * igamma
 
 def evaluate_ntc_combination(d: DatiMuro, df: pd.DataFrame, tipo: str, kh: float, kv: float, g_phi: float, g_stab: float, g_dest: float, g_q: float) -> Dict[str, float]:
     z, sig_h, Ph, Pv, zbar_h = integrate_pressures_ntc(df, d.H, d.falda_retro, d.q, d.delta_muro, kh, kv, g_phi, g_q, g_dest)
     zf, sig_p, Pp, z_pp = integrate_passive(df, min(d.h_fronte, d.H), d.falda_fronte, g_phi, g_stab, kh if d.include_passivo else 0.0)
     if not d.include_passivo: Pp, z_pp = 0.0, 0.0
 
-    # Pesi e Masse Strutturali
-    A_base = d.B * d.t_base
-    W_base = A_base * d.gamma_cls * g_stab
+    # Bracci di leva corretti (dal fondo base del muro, y=0)
+    braccio_Ph_spiccato = max(d.H - zbar_h, 0.0) # Dal fusto
+    braccio_Ph_polo = d.t_base + braccio_Ph_spiccato
+    braccio_Pp_polo = max(min(d.h_fronte, d.H) - z_pp, 0.0)
+
+    # Pesi Strutturali
+    W_base = d.B * d.t_base * d.gamma_cls * g_stab
     x_base = d.B / 2.0
-    
-    A_fusto = 0.5 * (d.t_fusto_top + d.t_fusto_bot) * d.H
-    W_fusto = A_fusto * d.gamma_cls * g_stab
+    W_fusto = 0.5 * (d.t_fusto_top + d.t_fusto_bot) * d.H * d.gamma_cls * g_stab
     x_fusto = d.B_punta + (d.t_fusto_bot / 2.0)
     
     gam_eff = sigma_v_eff(df, d.H, d.falda_retro) / max(d.H, 1e-9)
     W_heel = d.B_tallone * d.H * gam_eff * g_stab
     x_heel = d.B_punta + d.t_fusto_bot + (d.B_tallone / 2.0)
-    
     Wq = d.q * d.B_tallone * g_q
     x_q = x_heel
 
-    # Forze d'inerzia (MAX)
+    # Inerzie Sismiche
     F_base = kh * (W_base / g_stab)
     F_fusto = kh * (W_fusto / g_stab)
     F_heel = kh * (W_heel / g_stab)
 
-    # Tirante
-    H_tirante, V_tirante, M_tirante = 0.0, 0.0, 0.0
+    # ------------------ EFFETTO TIRANTE ------------------
+    H_tirante, V_tirante, M_tirante_polo = 0.0, 0.0, 0.0
+    H_tirante_spiccato, V_tirante_spiccato, M_tirante_spiccato = 0.0, 0.0, 0.0
+    
     if d.ha_tirante:
         alpha_t = math.radians(d.t_inclinazione)
         H_tirante = d.t_tiro * math.cos(alpha_t)
         V_tirante = d.t_tiro * math.sin(alpha_t)
         x_tirante_testa = d.B_punta + d.t_fusto_bot
-        M_tirante = H_tirante * d.t_quota + V_tirante * x_tirante_testa
+        M_tirante_polo = H_tirante * d.t_quota + V_tirante * x_tirante_testa
+        
+        # Effetto strutturale del tirante sul fusto (se ancorato sopra lo spiccato)
+        y_spiccato = d.t_base
+        if d.t_quota > y_spiccato:
+            H_tirante_spiccato = H_tirante
+            V_tirante_spiccato = V_tirante
+            M_tirante_spiccato = H_tirante_spiccato * (d.t_quota - y_spiccato)
 
-    # Risultanti e Momenti (Polo in punta x=0, y=0)
+    # ------------------ EQUILIBRIO GLOBALE ------------------
     V_tot = (W_base + W_fusto + W_heel + Wq) * (1.0 - kv) + Pv + V_tirante
     H_tot = Ph + F_base + F_fusto + F_heel - H_tirante
     
-    M_stab = W_base * x_base + W_fusto * x_fusto + W_heel * x_heel + Wq * x_q + Pp * z_pp + Pv * d.B + M_tirante
-    M_destab = Ph * zbar_h + F_base * (d.t_base/2) + F_fusto * (d.t_base + d.H/2) + F_heel * (d.t_base + d.H/2)
+    M_stab = W_base * x_base + W_fusto * x_fusto + W_heel * x_heel + Wq * x_q + Pp * braccio_Pp_polo + Pv * d.B + M_tirante_polo
+    M_destab = Ph * braccio_Ph_polo + F_base * (d.t_base/2) + F_fusto * (d.t_base + d.H/2) + F_heel * (d.t_base + d.H/2)
     
     FS_rib = M_stab / max(M_destab, 1e-9)
 
-    # Scorrimento
     cu_base = float(df.iloc[-1]['cu_kPa']) / g_phi
     Rf = d.mu_base * V_tot + cu_base * d.B + Pp
     FS_scorr = Rf / max(H_tot, 1e-9)
 
-    # Capacità Portante Rigorosa (Hansen)
+    # ------------------ CAPACITÀ PORTANTE (HANSEN) ------------------
     M_net = max(M_destab - M_stab, 0) + (V_tot * d.B / 2.0)
     e = abs(M_net / max(V_tot, 1e-9) - d.B / 2.0)
     B_eff = d.B - 2*e
@@ -247,22 +249,28 @@ def evaluate_ntc_combination(d: DatiMuro, df: pd.DataFrame, tipo: str, kh: float
     q_lim = calcola_qlim_hansen(B_eff, V_tot, max(H_tot, 0), gamma_f, phi_f, c_f, q_sovraccarico_fond)
     FS_portanza = q_lim / max(qmax, 1e-9)
 
-    # QUESTO E' IL RETURN CORRETTO CHE EVITA IL KEY ERROR IN APP.PY
+    # ------------------ SOLLECITAZIONI STRUTTURALI (FUSTO) ------------------
+    # Calcolate allo spiccato fondazione (Quota: d.t_base)
+    N_spiccato = (W_fusto * (1.0 - kv)) + Pv + V_tirante_spiccato
+    V_spiccato = Ph + F_fusto - H_tirante_spiccato
+    # M_spiccato = Momento Spinta + Momento Inerzia - Momento Tirante
+    M_spiccato = (Ph * braccio_Ph_spiccato) + (F_fusto * (d.H / 2.0)) - M_tirante_spiccato
+
     return {
         'Tipo': tipo, 'Pa': Ph, 'Pp': Pp,
         'FS_rib': FS_rib, 'FS_scorr': FS_scorr,
         'qmax': qmax, 'qmin': qmin,
-        'q_lim': q_lim, 'FS_portanza': FS_portanza, # <-- CHIAVI MANCANTI AGGIUNTE
-        'z_a': z, 'sig_a': sig_h,
-        'z_p': zf, 'sig_p': sig_p,
+        'q_lim': q_lim, 'FS_portanza': FS_portanza,
+        'N_spiccato': N_spiccato, 'V_spiccato': max(V_spiccato, 0.0), 'M_spiccato': max(M_spiccato, 0.0),
+        'z_a': z, 'sig_a': sig_h, 'z_p': zf, 'sig_p': sig_p,
     }
 
 def calcola_muro(d: DatiMuro) -> Dict[str, object]:
     df, _ = parse_stratigrafia(d.stratigrafia_csv)
-    st_EQU = evaluate_ntc_combination(d, df, "Statica_EQU", 0.0, 0.0, 1.25, 0.9, 1.1, 1.5)
-    st_GEO = evaluate_ntc_combination(d, df, "Statica_GEO", 0.0, 0.0, 1.25, 1.0, 1.0, 1.3)
-    se_pos = evaluate_ntc_combination(d, df, "Sismica_kv_pos", d.kh, d.kv, 1.25, 1.0, 1.0, 1.0)
-    se_neg = evaluate_ntc_combination(d, df, "Sismica_kv_neg", d.kh, -d.kv, 1.25, 1.0, 1.0, 1.0)
+    st_EQU = evaluate_ntc_combination(d, df, "Statica (EQU)", 0.0, 0.0, 1.25, 0.9, 1.1, 1.5)
+    st_GEO = evaluate_ntc_combination(d, df, "Statica (GEO)", 0.0, 0.0, 1.25, 1.0, 1.0, 1.3)
+    se_pos = evaluate_ntc_combination(d, df, "Sismica kv+", d.kh, d.kv, 1.25, 1.0, 1.0, 1.0)
+    se_neg = evaluate_ntc_combination(d, df, "Sismica kv-", d.kh, -d.kv, 1.25, 1.0, 1.0, 1.0)
     return {'stratigrafia': df, 'statico': st_GEO, 'sismico': se_pos, 'st_EQU': st_EQU, 'se_neg': se_neg}
 
 def tabella_sintesi(d: DatiMuro, r: Dict[str, object]) -> pd.DataFrame:
@@ -271,13 +279,25 @@ def tabella_sintesi(d: DatiMuro, r: Dict[str, object]) -> pd.DataFrame:
     rows = [
         ('Pa (Spinta Orizz.) [kN/m]', st['Pa'], se['Pa']),
         ('Pp (Spinta Passiva) [kN/m]', st['Pp'], se['Pp']),
-        ('FS ribaltamento [-]', r['st_EQU']['FS_rib'], se['FS_rib']),
-        ('FS scorrimento [-]', st['FS_scorr'], se['FS_scorr']),
-        ('qmax [kPa]', st['qmax'], se['qmax']),
+        ('FS Ribaltamento [-]', r['st_EQU']['FS_rib'], se['FS_rib']),
+        ('FS Scorrimento [-]', st['FS_scorr'], se['FS_scorr']),
+        ('q_max [kPa]', st['qmax'], se['qmax']),
         ('q_lim Hansen [kPa]', st['q_lim'], se['q_lim']),
         ('FS Portanza [-]', st['FS_portanza'], se['FS_portanza']),
     ]
     return pd.DataFrame(rows, columns=['Parametro', 'Statico (GEO/EQU)', 'Sismico kv+'])
+
+def tabella_sollecitazioni(r: Dict[str, object]) -> pd.DataFrame:
+    rows = []
+    for k in ['statico', 'sismico', 'st_EQU', 'se_neg']:
+        data = r[k]
+        rows.append({
+            'Combinazione': data['Tipo'],
+            'N Spiccato [kN/m]': round(data['N_spiccato'], 2),
+            'V Spiccato [kN/m]': round(data['V_spiccato'], 2),
+            'M Spiccato [kNm/m]': round(data['M_spiccato'], 2),
+        })
+    return pd.DataFrame(rows)
 
 def genera_warning(d: DatiMuro, r: dict) -> List[str]:
     warnings = []
@@ -290,14 +310,13 @@ def genera_warning(d: DatiMuro, r: dict) -> List[str]:
     if se['FS_rib'] < 1.0: warnings.append(f"⚠ FS ribaltamento sismico non soddisfatto ({se['FS_rib']:.2f} < 1.0)")
     if se['FS_scorr'] < 1.0: warnings.append(f"⚠ FS scorrimento sismico non soddisfatto ({se['FS_scorr']:.2f} < 1.0)")
     if se['FS_portanza'] < 1.0: warnings.append(f"⚠ FS portanza sismica non soddisfatto ({se['FS_portanza']:.2f} < 1.0)")
-    if st_GEO['qmin'] == 0 or se['qmin'] == 0: warnings.append(f"⚠ Pressione minima nulla: parzializzazione della sezione di fondazione rilevata.")
     return warnings
 
 def genera_note(d: DatiMuro, r: dict) -> List[str]:
     note = []
     if d.include_passivo: note.append("Il contributo passivo a fronte è incluso nel calcolo.")
-    if d.ha_tirante: note.append("È presente un tirante di ancoraggio: l'equilibrio beneficia delle componenti stabilizzanti del pretiro.")
-    note.append("Carico Limite: La capacità portante è calcolata rigorosamente con la formula trinomia di Brinch-Hansen, riducendo la base per l'eccentricità (B').")
+    if d.ha_tirante: note.append("È presente un tirante di ancoraggio: l'equilibrio e le sollecitazioni strutturali beneficiano delle componenti stabilizzanti.")
+    note.append("Carico Limite: La capacità portante è calcolata rigorosamente con la formula trinomia di Brinch-Hansen.")
     return note
 
 def figura_geometria(d: DatiMuro) -> go.Figure:
@@ -317,9 +336,8 @@ def figura_geometria(d: DatiMuro) -> go.Figure:
 
     if d.falda_retro < d.H:
         y_falda = d.t_base + d.falda_retro
-        fig.add_trace(go.Scatter(x=[xft, d.B, d.B+2, xft], y=[y_falda, y_falda, H_tot, H_tot], fill='toself', fillcolor='rgba(0, 100, 220, 0.20)', name='Zona satura (tergo)', line=dict(color='blue', width=1, dash='dot')))
+        fig.add_trace(go.Scatter(x=[xft, d.B, d.B+2, xft], y=[y_falda, y_falda, H_tot, H_tot], fill='toself', fillcolor='rgba(0, 100, 220, 0.20)', name='Zona satura', line=dict(color='blue', width=1, dash='dot')))
 
-    # Disegna Tirante
     if d.ha_tirante:
         x_start = xf + d.t_fusto_bot
         y_start = d.t_base + d.t_quota
@@ -329,9 +347,7 @@ def figura_geometria(d: DatiMuro) -> go.Figure:
         y_end = y_start - lunghezza_grafica * math.sin(alpha_rad)
         fig.add_trace(go.Scatter(x=[x_start, x_end], y=[y_start, y_end], mode='lines+markers', name='Tirante', line=dict(color='red', width=2, dash='dash'), marker=dict(symbol='arrow-bar-up', size=10)))
 
-    fig.add_annotation(x=-0.3, y=H_tot / 2, text=f"H tot = {H_tot:.2f} m", showarrow=False, xanchor='right', font=dict(size=11, color='black'))
-    
-    fig.update_layout(title='Geometria del muro e Ancoraggi', xaxis_title='x [m]', yaxis_title='y [m]', template='plotly_white', legend=dict(orientation='h', y=-0.15))
+    fig.update_layout(title='Modello Fisico e Tiranti', xaxis_title='x [m]', yaxis_title='y [m]', template='plotly_white', legend=dict(orientation='h', y=-0.15))
     fig.update_yaxes(scaleanchor='x', scaleratio=1)
     return fig
 
@@ -343,16 +359,14 @@ def figura_output(r: Dict[str, object]) -> go.Figure:
     if ha_passivo: fig = make_subplots(rows=1, cols=2, subplot_titles=('Pressioni attive a tergo', 'Pressioni passive a fronte'), shared_yaxes=False)
     else: fig = make_subplots(rows=1, cols=1, subplot_titles=('Pressioni attive a tergo',))
 
-    fig.add_trace(go.Scatter(x=st['sig_a'], y=st['z_a'], mode='lines', fill='tozerox', name='Attiva statica (GEO)', line=dict(color='royalblue'), fillcolor='rgba(65, 105, 225, 0.20)'), row=1, col=1)
+    fig.add_trace(go.Scatter(x=st['sig_a'], y=st['z_a'], mode='lines', fill='tozerox', name='Attiva statica', line=dict(color='royalblue'), fillcolor='rgba(65, 105, 225, 0.20)'), row=1, col=1)
     fig.add_trace(go.Scatter(x=se['sig_a'], y=se['z_a'], mode='lines', name='Attiva sismica', line=dict(color='firebrick', dash='dash')), row=1, col=1)
 
     if ha_passivo:
         fig.add_trace(go.Scatter(x=st['sig_p'], y=st['z_p'], mode='lines', fill='tozerox', name='Passiva statica', line=dict(color='seagreen'), fillcolor='rgba(46, 139, 87, 0.20)'), row=1, col=2)
         fig.add_trace(go.Scatter(x=se['sig_p'], y=se['z_p'], mode='lines', name='Passiva sismica', line=dict(color='darkorange', dash='dash')), row=1, col=2)
-        fig.update_xaxes(title_text='σh [kPa]', row=1, col=2)
         fig.update_yaxes(title_text='z fronte [m]', autorange='reversed', row=1, col=2)
 
-    fig.update_xaxes(title_text='σh [kPa]', row=1, col=1)
-    fig.update_yaxes(title_text='z [m]', autorange='reversed', row=1, col=1)
-    fig.update_layout(title='Diagrammi delle pressioni laterali', template='plotly_white', legend=dict(orientation='h', y=-0.18))
+    fig.update_yaxes(title_text='z tergo [m]', autorange='reversed', row=1, col=1)
+    fig.update_layout(title='Diagrammi delle pressioni', template='plotly_white', legend=dict(orientation='h', y=-0.18))
     return fig
