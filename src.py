@@ -143,9 +143,12 @@ def integrate_pressures_ntc(df, H, falda, q_sur, delta_muro, kh=0.0, kv=0.0, gam
         
     sig_h = np.array(sig_h)
     sig_v = np.array(sig_v)
-    Ph = np.trapz(sig_h, z)
-    Pv = np.trapz(sig_v, z)
-    zbar_h = np.trapz(sig_h * z, z) / max(Ph, 1e-9) if Ph > 0 else 0.0
+    
+    # MODIFICA: np.trapz -> np.trapezoid per compatibilità con NumPy 2.0+
+    Ph = np.trapezoid(sig_h, z)
+    Pv = np.trapezoid(sig_v, z)
+    zbar_h = np.trapezoid(sig_h * z, z) / max(Ph, 1e-9) if Ph > 0 else 0.0
+    
     return z, sig_h, Ph, Pv, zbar_h
 
 def integrate_passive(df, h_front, falda_front, gamma_phi=1.0, gamma_G=1.0, kh=0.0):
@@ -162,8 +165,11 @@ def integrate_passive(df, h_front, falda_front, gamma_phi=1.0, gamma_G=1.0, kh=0
         sig_h = max((Kp - kh) * sv + u, 0.0)
         sig.append(sig_h)
     sig = np.array(sig)
-    P = np.trapz(sig, z)
-    zbar = np.trapz(sig * z, z) / max(P, 1e-9)
+    
+    # MODIFICA: np.trapz -> np.trapezoid per compatibilità con NumPy 2.0+
+    P = np.trapezoid(sig, z)
+    zbar = np.trapezoid(sig * z, z) / max(P, 1e-9)
+    
     return z, sig, P, zbar
 
 def evaluate_ntc_combination(d: DatiMuro, df: pd.DataFrame, tipo: str, kh: float, kv: float, g_phi: float, g_stab: float, g_dest: float, g_q: float) -> Dict[str, float]:
