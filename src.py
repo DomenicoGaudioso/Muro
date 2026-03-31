@@ -16,7 +16,6 @@ DEFAULT_STRAT = """2.0,18,20,30,0,25000
 """
 
 def parse_stratigrafia(csv_text: str) -> Tuple[pd.DataFrame, List[str]]:
-    """Righe: spessore,gamma_dry,gamma_sat,phi_deg,cu_kPa,k_kN_m3"""
     err, rows = [], []
     lines = [ln.strip() for ln in csv_text.splitlines() if ln.strip()]
     if not lines:
@@ -46,18 +45,12 @@ def layer_at_depth(df: pd.DataFrame, z: float) -> pd.Series:
         return df.iloc[-1]
     return sel.iloc[0]
 
-def gamma_eff(layer: pd.Series, z_mid: float, falda_depth: float) -> float:
-    if z_mid <= falda_depth:
-        return float(layer['gamma_dry'])
-    return max(float(layer['gamma_sat']) - GAMMA_W, 1.0)
-
 def sigma_v_eff(df: pd.DataFrame, z: float, falda_depth: float) -> float:
     s = 0.0
     for _, r in df.iterrows():
         a = max(0.0, float(r['z_top_m']))
         b = min(z, float(r['z_bot_m']))
-        if b <= a:
-            continue
+        if b <= a: continue
         if falda_depth <= a:
             s += (b - a) * max(float(r['gamma_sat']) - GAMMA_W, 1.0)
         elif falda_depth >= b:
@@ -91,63 +84,14 @@ class DatiMuro:
     falda_fronte: float
     kh: float
     kv: float
-    delta_muro: float = 20.0  # Attrito terra-muro (NOVITA' MAX)
+    delta_muro: float = 20.0
     include_passivo: bool = True
     stratigrafia_csv: str = DEFAULT_STRAT
+    # Parametri Tirante
     ha_tirante: bool = False
-    t_quota: float = 0.0 # Quota applicazione dal piano di posa [m]
-    t_inclinazione: float = 15.0 # Inclinazione verso il basso [°]
-    t_tiro: float = 0.0 # Forza di pretiro per metro lineare [kN/m]
-
-def fattori_capacita_portante(phi_deg):
-    """Calcola Nc, Nq, Ngamma (metodo Vesic/Hansen)"""
-    if phi_deg <= 0:
-        return 5.14, 1.0, 0.0
-    phi = math.radians(phi_deg)
-    Nq = math.exp(math.pi * math.tan(phi)) * (math.tan(math.radians(45 + phi_deg/2)))**2
-    Nc = (Nq - 1) / math.tan(phi)
-    Ngamma = 2 * (Nq + 1) * math.tan(phi)
-    return Nc, Nq, Ngamma
-
-def calcola_qlim_hansen(B_eff, V_tot, H_tot, gamma_fond, phi_fond, c_fond, q_sovraccarico):
-    """Calcolo Capacità Portante q_lim con eccentricità e inclinazione carichi"""
-    Nc, Nq, Ngamma = fattori_capacita_portante(phi_fond)
-    
-    # Fattori di inclinazione (i_c, i_q, i_gamma) - Formula semplificata di Hansen
-    m = (2 + B_eff/1000) / (1 + B_eff/1000) # (Assumendo L infinita per il muro)
-    
-    # V_tot non può essere nullo per il calcolo dell'inclinazione
-    V_calc = max(V_tot, 1e-9)
-    theta = math.atan(H_tot / V_calc)
-    
-    iq = (1 - 0.5 * H_tot / (V_calc + B_eff * c_fond * (1/math.tan(math.radians(max(phi_fond, 1))))))**5 if phi_fond > 0 else 1.0
-    igamma = (1 - 0.7 * H_tot / (V_calc + B_eff * c_fond * (1/math.tan(math.radians(max(phi_fond, 1))))))**5 if phi_fond > 0 else 1.0
-    ic = iq - (1 - iq) / (Nc * math.tan(math.radians(max(phi_fond, 1)))) if phi_fond > 0 else 1.0
-
-    term_c = c_fond * Nc * ic
-    term_q = q_sovraccarico * Nq * iq
-    term_gamma = 0.5 * gamma_fond * B_eff * Ngamma * igamma
-    
-    return term_c + term_q + term_gamma
-
-def ka_mo(phi_deg, delta_deg, kh, kv):
-    """Calcolo K_A con Mononobe-Okabe (Metodo MAX)"""
-    phi = math.radians(phi_deg)
-    delta = math.radians(delta_deg)
-    theta = math.atan(kh / (1 - kv)) if (1-kv) != 0 else 0.0
-    
-    if phi - theta <= 0:
-        theta = max(0.0, phi - 0.001)
-        
-    num = (math.cos(phi - theta))**2
-    den_part1 = math.cos(theta) * math.cos(delta + theta)
-    den_part2 = (1 + math.sqrt(math.sin(phi + delta) * math.sin(phi - theta) / math.cos(delta + theta)))**2
-    return (num / (den_part1 * den_part2)) * (1 - kv)
-
-def kp(phi):
-    """Spinta passiva (Rankine)"""
-    s = math.sin(math.radians(phi))
-    return (1 + s) / (1 - s)
+    t_quota: float = 0.0
+    t_inclinazione: float = 15.0
+    t_tiro: float = 0.0
 
 def valida_dati(d: DatiMuro) -> List[str]:
     err = []
@@ -160,6 +104,20 @@ def valida_dati(d: DatiMuro) -> List[str]:
     err.extend(e2)
     return err
 
+def ka_mo(phi_deg, delta_deg, kh, kv):
+    phi = math.radians(phi_deg)
+    delta = math.radians(delta_deg)
+    theta = math.atan(kh / (1 - kv)) if (1-kv) != 0 else 0.0
+    if phi - theta <= 0: theta = max(0.0, phi - 0.001)
+    num = (math.cos(phi - theta))**2
+    den_part1 = math.cos(theta) * math.cos(delta + theta)
+    den_part2 = (1 + math.sqrt(math.sin(phi + delta) * math.sin(phi - theta) / math.cos(delta + theta)))**2
+    return (num / (den_part1 * den_part2)) * (1 - kv)
+
+def kp(phi):
+    s = math.sin(math.radians(phi))
+    return (1 + s) / (1 - s)
+
 def integrate_pressures_ntc(df, H, falda, q_sur, delta_muro, kh=0.0, kv=0.0, gamma_phi=1.0, gamma_Q=1.0, gamma_G=1.0):
     z = np.linspace(0, H, 300)
     sig_h, sig_v = [], []
@@ -167,28 +125,20 @@ def integrate_pressures_ntc(df, H, falda, q_sur, delta_muro, kh=0.0, kv=0.0, gam
         lay = layer_at_depth(df, zi)
         phi_d = math.degrees(math.atan(math.tan(math.radians(float(lay['phi_deg']))) / gamma_phi))
         Ka = ka_mo(phi_d, delta_muro, kh, kv) if phi_d > 0 else 1.0
-        
         sv = sigma_v_eff(df, zi, falda) * gamma_G
         u = u_hydro(zi, falda) * gamma_G
-        
-        # Spinta totale orizzontale e verticale
         p_tot = Ka * sv + Ka * (q_sur * gamma_Q)
         sig_h.append(p_tot * math.cos(math.radians(delta_muro)) + u)
         sig_v.append(p_tot * math.sin(math.radians(delta_muro)))
         
-    sig_h = np.array(sig_h)
-    sig_v = np.array(sig_v)
-    
-    # MODIFICA: np.trapz -> np.trapezoid per compatibilità con NumPy 2.0+
+    sig_h, sig_v = np.array(sig_h), np.array(sig_v)
     Ph = np.trapezoid(sig_h, z)
     Pv = np.trapezoid(sig_v, z)
     zbar_h = np.trapezoid(sig_h * z, z) / max(Ph, 1e-9) if Ph > 0 else 0.0
-    
     return z, sig_h, Ph, Pv, zbar_h
 
 def integrate_passive(df, h_front, falda_front, gamma_phi=1.0, gamma_G=1.0, kh=0.0):
-    if h_front <= 0:
-        return np.array([0.0]), np.array([0.0]), 0.0, 0.0
+    if h_front <= 0: return np.array([0.0]), np.array([0.0]), 0.0, 0.0
     z = np.linspace(0, h_front, 200)
     sig = []
     for zi in z:
@@ -197,21 +147,37 @@ def integrate_passive(df, h_front, falda_front, gamma_phi=1.0, gamma_G=1.0, kh=0
         Kp = kp(phi_d) if phi_d > 0 else 1.0
         sv = sigma_v_eff(df, zi, falda_front) * gamma_G
         u = u_hydro(zi, falda_front) * gamma_G
-        sig_h = max((Kp - kh) * sv + u, 0.0)
-        sig.append(sig_h)
+        sig.append(max((Kp - kh) * sv + u, 0.0))
     sig = np.array(sig)
-    
-    # MODIFICA: np.trapz -> np.trapezoid per compatibilità con NumPy 2.0+
     P = np.trapezoid(sig, z)
     zbar = np.trapezoid(sig * z, z) / max(P, 1e-9)
-    
     return z, sig, P, zbar
 
-def evaluate_ntc_combination(d: DatiMuro, df: pd.DataFrame, tipo: str, kh: float, kv: float, g_phi: float, g_stab: float, g_dest: float, g_q: float) -> Dict[str, float]:
-    # Spinte Attive (NTC)
-    z, sig_h, Ph, Pv, zbar_h = integrate_pressures_ntc(df, d.H, d.falda_retro, d.q, d.delta_muro, kh, kv, g_phi, g_q, g_dest)
+def fattori_capacita_portante(phi_deg):
+    """Calcola Nc, Nq, Ngamma (metodo Vesic/Hansen)"""
+    if phi_deg <= 0: return 5.14, 1.0, 0.0
+    phi = math.radians(phi_deg)
+    Nq = math.exp(math.pi * math.tan(phi)) * (math.tan(math.radians(45 + phi_deg/2)))**2
+    Nc = (Nq - 1) / math.tan(phi)
+    Ngamma = 2 * (Nq + 1) * math.tan(phi)
+    return Nc, Nq, Ngamma
+
+def calcola_qlim_hansen(B_eff, V_tot, H_tot, gamma_fond, phi_fond, c_fond, q_sovraccarico):
+    """Calcolo Capacità Portante q_lim con eccentricità e inclinazione carichi"""
+    Nc, Nq, Ngamma = fattori_capacita_portante(phi_fond)
+    V_calc = max(V_tot, 1e-9)
     
-    # Spinte Passive
+    iq = (1 - 0.5 * H_tot / (V_calc + B_eff * c_fond * (1/math.tan(math.radians(max(phi_fond, 1))))))**5 if phi_fond > 0 else 1.0
+    igamma = (1 - 0.7 * H_tot / (V_calc + B_eff * c_fond * (1/math.tan(math.radians(max(phi_fond, 1))))))**5 if phi_fond > 0 else 1.0
+    ic = iq - (1 - iq) / (Nc * math.tan(math.radians(max(phi_fond, 1)))) if phi_fond > 0 else 1.0
+
+    term_c = c_fond * Nc * ic
+    term_q = q_sovraccarico * Nq * iq
+    term_gamma = 0.5 * gamma_fond * B_eff * Ngamma * igamma
+    return term_c + term_q + term_gamma
+
+def evaluate_ntc_combination(d: DatiMuro, df: pd.DataFrame, tipo: str, kh: float, kv: float, g_phi: float, g_stab: float, g_dest: float, g_q: float) -> Dict[str, float]:
+    z, sig_h, Ph, Pv, zbar_h = integrate_pressures_ntc(df, d.H, d.falda_retro, d.q, d.delta_muro, kh, kv, g_phi, g_q, g_dest)
     zf, sig_p, Pp, z_pp = integrate_passive(df, min(d.h_fronte, d.H), d.falda_fronte, g_phi, g_stab, kh if d.include_passivo else 0.0)
     if not d.include_passivo: Pp, z_pp = 0.0, 0.0
 
@@ -231,38 +197,23 @@ def evaluate_ntc_combination(d: DatiMuro, df: pd.DataFrame, tipo: str, kh: float
     Wq = d.q * d.B_tallone * g_q
     x_q = x_heel
 
-    # Forze d'inerzia (Metodo MAX)
+    # Forze d'inerzia (MAX)
     F_base = kh * (W_base / g_stab)
     F_fusto = kh * (W_fusto / g_stab)
     F_heel = kh * (W_heel / g_stab)
 
-    # Risultanti e Momenti rispetto alla punta (x=0, y=0)
-    V_tot = (W_base + W_fusto + W_heel + Wq) * (1.0 - kv) + Pv
-    H_tot = Ph + F_base + F_fusto + F_heel
-    
-    M_stab = W_base * x_base + W_fusto * x_fusto + W_heel * x_heel + Wq * x_q + Pp * z_pp + Pv * d.B
-    M_destab = Ph * zbar_h + F_base * (d.t_base/2) + F_fusto * (d.t_base + d.H/2) + F_heel * (d.t_base + d.H/2)
-    
-    FS_rib = M_stab / max(M_destab, 1e-9)
-
-    # Scorrimento
-    cu_base = float(df.iloc[-1]['cu_kPa']) / g_phi
-    Rf = d.mu_base * V_tot + cu_base * d.B + Pp
-    FS_scorr = Rf / max(H_tot, 1e-9)
-
-    # =================  EFFETTO TIRANTE =================
+    # Tirante
     H_tirante, V_tirante, M_tirante = 0.0, 0.0, 0.0
     if d.ha_tirante:
         alpha_t = math.radians(d.t_inclinazione)
         H_tirante = d.t_tiro * math.cos(alpha_t)
         V_tirante = d.t_tiro * math.sin(alpha_t)
-        # Assumiamo che il tirante tiri verso monte, quindi stabilizza
-        x_tirante_testa = d.B_punta + d.t_fusto_bot # posizione approssimativa fusto
+        x_tirante_testa = d.B_punta + d.t_fusto_bot
         M_tirante = H_tirante * d.t_quota + V_tirante * x_tirante_testa
 
-    # Risultanti e Momenti rispetto alla punta (x=0, y=0)
+    # Risultanti e Momenti (Polo in punta x=0, y=0)
     V_tot = (W_base + W_fusto + W_heel + Wq) * (1.0 - kv) + Pv + V_tirante
-    H_tot = Ph + F_base + F_fusto + F_heel - H_tirante # Il tirante si oppone alla spinta
+    H_tot = Ph + F_base + F_fusto + F_heel - H_tirante
     
     M_stab = W_base * x_base + W_fusto * x_fusto + W_heel * x_heel + Wq * x_q + Pp * z_pp + Pv * d.B + M_tirante
     M_destab = Ph * zbar_h + F_base * (d.t_base/2) + F_fusto * (d.t_base + d.H/2) + F_heel * (d.t_base + d.H/2)
@@ -274,55 +225,44 @@ def evaluate_ntc_combination(d: DatiMuro, df: pd.DataFrame, tipo: str, kh: float
     Rf = d.mu_base * V_tot + cu_base * d.B + Pp
     FS_scorr = Rf / max(H_tot, 1e-9)
 
-    # ================= NUOVO: CAPACITA' PORTANTE RIGOROSA =================
+    # Capacità Portante Rigorosa (Hansen)
     M_net = max(M_destab - M_stab, 0) + (V_tot * d.B / 2.0)
     e = abs(M_net / max(V_tot, 1e-9) - d.B / 2.0)
-    B_eff = d.B - 2*e # Larghezza ridotta di fondazione
+    B_eff = d.B - 2*e
 
     q_med = V_tot / d.B
     qmax = q_med * (1 + 6 * e / d.B)
+    qmin = q_med * (1 - 6 * e / d.B)
+    if qmin < 0:
+        u = d.B / 2.0 - e
+        qmax = (2.0 * V_tot) / (3.0 * u) if u > 0 else 0
+        qmin = 0.0
     
-    # Calcolo q_lim
     lay_fond = df.iloc[-1]
     phi_f = float(lay_fond['phi_deg']) / g_phi
     c_f = float(lay_fond['cu_kPa']) / g_phi
     gamma_f = float(lay_fond['gamma_dry'])
-    q_sovraccarico_fond = d.h_fronte * gamma_f # Sovraccarico a fianco della base
+    q_sovraccarico_fond = d.h_fronte * gamma_f
 
     q_lim = calcola_qlim_hansen(B_eff, V_tot, max(H_tot, 0), gamma_f, phi_f, c_f, q_sovraccarico_fond)
     FS_portanza = q_lim / max(qmax, 1e-9)
 
-    # Schiacciamento / Pressioni
-    M_net = M_destab - M_stab + (V_tot * d.B / 2.0)
-    e = M_net / max(V_tot, 1e-9)
-    q_med = V_tot / d.B
-    qmax = q_med * (1 + 6 * abs(e) / d.B)
-    qmin = q_med * (1 - 6 * abs(e) / d.B)
-    if qmin < 0:
-        u = d.B / 2.0 - abs(e)
-        qmax = (2.0 * V_tot) / (3.0 * u) if u > 0 else 0
-        qmin = 0.0
-
+    # QUESTO E' IL RETURN CORRETTO CHE EVITA IL KEY ERROR IN APP.PY
     return {
         'Tipo': tipo, 'Pa': Ph, 'Pp': Pp,
         'FS_rib': FS_rib, 'FS_scorr': FS_scorr,
         'qmax': qmax, 'qmin': qmin,
+        'q_lim': q_lim, 'FS_portanza': FS_portanza, # <-- CHIAVI MANCANTI AGGIUNTE
         'z_a': z, 'sig_a': sig_h,
         'z_p': zf, 'sig_p': sig_p,
     }
 
 def calcola_muro(d: DatiMuro) -> Dict[str, object]:
     df, _ = parse_stratigrafia(d.stratigrafia_csv)
-    
-    # 1. Statica EQU (Ribaltamento)
     st_EQU = evaluate_ntc_combination(d, df, "Statica_EQU", 0.0, 0.0, 1.25, 0.9, 1.1, 1.5)
-    # 2. Statica GEO (Scorrimento, Portanza)
     st_GEO = evaluate_ntc_combination(d, df, "Statica_GEO", 0.0, 0.0, 1.25, 1.0, 1.0, 1.3)
-    # 3. Sismica GEO kv+
     se_pos = evaluate_ntc_combination(d, df, "Sismica_kv_pos", d.kh, d.kv, 1.25, 1.0, 1.0, 1.0)
-    # 4. Sismica GEO kv-
     se_neg = evaluate_ntc_combination(d, df, "Sismica_kv_neg", d.kh, -d.kv, 1.25, 1.0, 1.0, 1.0)
-    
     return {'stratigrafia': df, 'statico': st_GEO, 'sismico': se_pos, 'st_EQU': st_EQU, 'se_neg': se_neg}
 
 def tabella_sintesi(d: DatiMuro, r: Dict[str, object]) -> pd.DataFrame:
@@ -334,55 +274,31 @@ def tabella_sintesi(d: DatiMuro, r: Dict[str, object]) -> pd.DataFrame:
         ('FS ribaltamento [-]', r['st_EQU']['FS_rib'], se['FS_rib']),
         ('FS scorrimento [-]', st['FS_scorr'], se['FS_scorr']),
         ('qmax [kPa]', st['qmax'], se['qmax']),
-        ('qmin [kPa]', st['qmin'], se['qmin']),
+        ('q_lim Hansen [kPa]', st['q_lim'], se['q_lim']),
+        ('FS Portanza [-]', st['FS_portanza'], se['FS_portanza']),
     ]
     return pd.DataFrame(rows, columns=['Parametro', 'Statico (GEO/EQU)', 'Sismico kv+'])
-
-# ---------------------------------------------------------------------------
-# Warning e note tecniche automatiche (Mantenute le tue originali!)
-# ---------------------------------------------------------------------------
 
 def genera_warning(d: DatiMuro, r: dict) -> List[str]:
     warnings = []
     st_EQU = r['st_EQU']
     st_GEO = r['statico']
     se = r['sismico']
-    
-    if st_EQU['FS_rib'] < 1.0:
-        warnings.append(f"⚠ FS ribaltamento statico (EQU) non soddisfatto ({st_EQU['FS_rib']:.2f} < 1.0)")
-    if st_GEO['FS_scorr'] < 1.0:
-        warnings.append(f"⚠ FS scorrimento statico (GEO) non soddisfatto ({st_GEO['FS_scorr']:.2f} < 1.0)")
-    if se['FS_rib'] < 1.0:
-        warnings.append(f"⚠ FS ribaltamento sismico non soddisfatto ({se['FS_rib']:.2f} < 1.0)")
-    if se['FS_scorr'] < 1.0:
-        warnings.append(f"⚠ FS scorrimento sismico non soddisfatto ({se['FS_scorr']:.2f} < 1.0)")
-    
-    qmax_max = max(st_GEO['qmax'], se['qmax'])
-    if qmax_max > d.q_amm:
-        warnings.append(f"⚠ Pressione massima ({qmax_max:.1f} kPa) supera q_amm ({d.q_amm:.1f} kPa)")
-    if st_GEO['qmin'] == 0 or se['qmin'] == 0:
-        warnings.append(f"⚠ Pressione minima nulla: parzializzazione della sezione di fondazione rilevata.")
-    if d.falda_retro < d.H:
-        warnings.append("ℹ Falda a tergo attiva: influenza significativa sulle spinte")
+    if st_EQU['FS_rib'] < 1.0: warnings.append(f"⚠ FS ribaltamento statico (EQU) non soddisfatto ({st_EQU['FS_rib']:.2f} < 1.0)")
+    if st_GEO['FS_scorr'] < 1.0: warnings.append(f"⚠ FS scorrimento statico (GEO) non soddisfatto ({st_GEO['FS_scorr']:.2f} < 1.0)")
+    if st_GEO['FS_portanza'] < 1.0: warnings.append(f"⚠ FS portanza statica non soddisfatto ({st_GEO['FS_portanza']:.2f} < 1.0)")
+    if se['FS_rib'] < 1.0: warnings.append(f"⚠ FS ribaltamento sismico non soddisfatto ({se['FS_rib']:.2f} < 1.0)")
+    if se['FS_scorr'] < 1.0: warnings.append(f"⚠ FS scorrimento sismico non soddisfatto ({se['FS_scorr']:.2f} < 1.0)")
+    if se['FS_portanza'] < 1.0: warnings.append(f"⚠ FS portanza sismica non soddisfatto ({se['FS_portanza']:.2f} < 1.0)")
+    if st_GEO['qmin'] == 0 or se['qmin'] == 0: warnings.append(f"⚠ Pressione minima nulla: parzializzazione della sezione di fondazione rilevata.")
     return warnings
 
 def genera_note(d: DatiMuro, r: dict) -> List[str]:
     note = []
-    if d.include_passivo:
-        note.append("Il contributo passivo a fronte è incluso nel calcolo dello scorrimento e ribaltamento.")
-    if d.falda_retro < d.H / 2:
-        note.append("La falda è nella metà superiore del terrapieno: le pressioni idrostatiche sono preponderanti.")
-    utilizzo = r['statico']['qmax'] / max(d.q_amm, 1e-9)
-    if utilizzo < 0.7:
-        note.append("Le pressioni di contatto sono ampiamente entro i limiti (utilizzo < 70%).")
-    elif utilizzo > 0.9:
-        note.append("Le pressioni di contatto sono prossime al limite ammissibile (utilizzo > 90%).")
-    note.append("Metodo MAX: Il calcolo differenzia le combinazioni EQU e GEO applicando coefficienti parziali e forze d'inerzia.")
+    if d.include_passivo: note.append("Il contributo passivo a fronte è incluso nel calcolo.")
+    if d.ha_tirante: note.append("È presente un tirante di ancoraggio: l'equilibrio beneficia delle componenti stabilizzanti del pretiro.")
+    note.append("Carico Limite: La capacità portante è calcolata rigorosamente con la formula trinomia di Brinch-Hansen, riducendo la base per l'eccentricità (B').")
     return note
-
-# ---------------------------------------------------------------------------
-# Visualizzazioni originali (Mantenute le tue Plotly!)
-# ---------------------------------------------------------------------------
 
 def figura_geometria(d: DatiMuro) -> go.Figure:
     fig = go.Figure()
@@ -403,9 +319,19 @@ def figura_geometria(d: DatiMuro) -> go.Figure:
         y_falda = d.t_base + d.falda_retro
         fig.add_trace(go.Scatter(x=[xft, d.B, d.B+2, xft], y=[y_falda, y_falda, H_tot, H_tot], fill='toself', fillcolor='rgba(0, 100, 220, 0.20)', name='Zona satura (tergo)', line=dict(color='blue', width=1, dash='dot')))
 
+    # Disegna Tirante
+    if d.ha_tirante:
+        x_start = xf + d.t_fusto_bot
+        y_start = d.t_base + d.t_quota
+        alpha_rad = math.radians(d.t_inclinazione)
+        lunghezza_grafica = 2.0
+        x_end = x_start + lunghezza_grafica * math.cos(alpha_rad)
+        y_end = y_start - lunghezza_grafica * math.sin(alpha_rad)
+        fig.add_trace(go.Scatter(x=[x_start, x_end], y=[y_start, y_end], mode='lines+markers', name='Tirante', line=dict(color='red', width=2, dash='dash'), marker=dict(symbol='arrow-bar-up', size=10)))
+
     fig.add_annotation(x=-0.3, y=H_tot / 2, text=f"H tot = {H_tot:.2f} m", showarrow=False, xanchor='right', font=dict(size=11, color='black'))
     
-    fig.update_layout(title='Geometria del muro', xaxis_title='x [m]', yaxis_title='y [m]', template='plotly_white', legend=dict(orientation='h', y=-0.15))
+    fig.update_layout(title='Geometria del muro e Ancoraggi', xaxis_title='x [m]', yaxis_title='y [m]', template='plotly_white', legend=dict(orientation='h', y=-0.15))
     fig.update_yaxes(scaleanchor='x', scaleratio=1)
     return fig
 
@@ -414,10 +340,8 @@ def figura_output(r: Dict[str, object]) -> go.Figure:
     se = r['sismico']
     ha_passivo = st['Pp'] > 0 or se['Pp'] > 0
 
-    if ha_passivo:
-        fig = make_subplots(rows=1, cols=2, subplot_titles=('Pressioni attive a tergo', 'Pressioni passive a fronte'), shared_yaxes=False)
-    else:
-        fig = make_subplots(rows=1, cols=1, subplot_titles=('Pressioni attive a tergo',))
+    if ha_passivo: fig = make_subplots(rows=1, cols=2, subplot_titles=('Pressioni attive a tergo', 'Pressioni passive a fronte'), shared_yaxes=False)
+    else: fig = make_subplots(rows=1, cols=1, subplot_titles=('Pressioni attive a tergo',))
 
     fig.add_trace(go.Scatter(x=st['sig_a'], y=st['z_a'], mode='lines', fill='tozerox', name='Attiva statica (GEO)', line=dict(color='royalblue'), fillcolor='rgba(65, 105, 225, 0.20)'), row=1, col=1)
     fig.add_trace(go.Scatter(x=se['sig_a'], y=se['z_a'], mode='lines', name='Attiva sismica', line=dict(color='firebrick', dash='dash')), row=1, col=1)
