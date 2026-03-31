@@ -105,11 +105,30 @@ current = {k: v for k, v in d.__dict__.items()}
 # ---------------------------------------------------------------------------
 # Metriche principali (Le tue 6 colonne originali!)
 # ---------------------------------------------------------------------------
-c1, c2, c3, c4, c5, c6 = st.columns(6)
-c1.metric('FS rib. statico (EQU)',   f"{r['st_EQU']['FS_rib']:.2f}")
-c2.metric('FS scorr. statico (GEO)', f"{r['statico']['FS_scorr']:.2f}")
-c3.metric('FS rib. sismico',   f"{r['sismico']['FS_rib']:.2f}")
-c4.metric('FS scorr. sismico', f"{r['sismico']['FS_scorr']:.2f}")
+st.header('Ancoraggi (Tiranti)')
+ha_tirante = st.checkbox('Inserisci Tirante di ancoraggio', value=False)
+if ha_tirante:
+    t_quota = st.number_input('Quota applicazione (dal fondo) [m]', 0.0, float(H + t_base), float(H + t_base - 1.0), 0.1)
+    t_tiro = st.number_input('Tiro di progetto (per m lineare) [kN/m]', 0.0, 1000.0, 150.0, 10.0)
+    t_inclinazione = st.number_input('Inclinazione rispetto orizzontale [°]', 0.0, 60.0, 15.0, 1.0)
+else:
+    t_quota, t_tiro, t_inclinazione = 0.0, 0.0, 0.0
+
+# Modifica le Metriche Principali (niente più q_amm):
+c1, c2, c3, c4 = st.columns(4)
+c1.metric('FS Ribaltamento', f"{r['st_EQU']['FS_rib']:.2f}")
+c2.metric('FS Scorrimento', f"{r['statico']['FS_scorr']:.2f}")
+
+# La nuova metrica analitica per il terreno
+fs_portanza = r['statico']['FS_portanza']
+q_lim_calc = r['statico']['q_lim']
+c3.metric(
+    'FS Portanza (Hansen)', 
+    f"{fs_portanza:.2f}", 
+    delta="Soddisfatto" if fs_portanza >= 1.0 else "Non Soddisfatto",
+    delta_color="normal" if fs_portanza >= 1.0 else "inverse"
+)
+c4.metric('q_lim Calcolato [kPa]', f"{q_lim_calc:.1f}")
 
 qmax_val = r['statico']['qmax']
 delta_q = qmax_val - d.q_amm
@@ -125,7 +144,7 @@ c6.metric('q_amm [kPa]', f"{d.q_amm:.1f}")
 # Le tue Tab Originali
 # ---------------------------------------------------------------------------
 t1, t2, t3, t4, t5 = st.tabs([
-    'Sintesi e Download', 'Stratigrafia', 'Geometria Plotly', 'Output Plotly', 'Note e Warning NTC',
+    '📐 Cruscotto Base', '📊 Output Pressioni', '🔗 Analisi Tiranti', '🌍 Stabilità Globale Pendio', '⚠️ Warning'
 ])
 
 with t1:
@@ -150,7 +169,9 @@ with t3:
     st.plotly_chart(figura_geometria(d), use_container_width=True)
 
 with t4:
-    st.plotly_chart(figura_output(r), use_container_width=True)
+    st.header("Analisi di Stabilità Globale")
+    st.markdown("Questa sezione implementerà la ricerca del cerchio di scivolamento critico che coinvolge il sistema terreno-muro.")
+    st.info("🚧 Modulo in fase di espansione: L'implementazione completa del metodo di Bishop/Fellenius con griglia di ricerca automatica per il fattore di sicurezza minimo sarà configurata nel prossimo step.")
 
 with t5:
     st.subheader('Warning tecnici')
