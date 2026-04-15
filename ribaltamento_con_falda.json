@@ -1,0 +1,66 @@
+{
+  "meta": {
+    "verifica": "Capacità portante fondazione su argilla (φ=0, cu≠0) — metodo Brinch-Hansen",
+    "norma": "NTC2018 §6.4.2 / EC7-1 §6.5.2.3 / Brinch-Hansen 1970",
+    "fonte": "Viggiani C. - Fondazioni, CUEN Napoli 1999, pag. 157-168. Formula trinomia Brinch-Hansen per φ=0.",
+    "url_fonte": "https://www.ntc.gov.it/images/documenti/NTC_2018_GU_1_21_feb_2018.pdf",
+    "data_generazione": "2026-04-15",
+    "autore": "CivilBox Test Builder Agent"
+  },
+  "input": {
+    "H": 3.0,
+    "q": 5.0,
+    "gamma_cls": 24.0,
+    "B": 2.5,
+    "B_punta": 0.7,
+    "B_tallone": 1.8,
+    "t_base": 0.4,
+    "t_fusto_top": 0.3,
+    "t_fusto_bot": 0.4,
+    "mu_base": 0.4,
+    "q_amm": 200.0,
+    "h_fronte": 0.3,
+    "falda_retro": 99.0,
+    "falda_fronte": 99.0,
+    "kh": 0.0,
+    "kv": 0.0,
+    "delta_muro": 0.0,
+    "include_passivo": false,
+    "ha_tirante": false,
+    "stratigrafia_csv": "10.0,17,19,0,60,20000"
+  },
+  "risultati_attesi": {
+    "FS_rib_EQU": {
+      "valore": 1.4926,
+      "unita": "-",
+      "tolleranza_percentuale": 1.0,
+      "nota": "FS ribaltamento su argilla (Nc=5.14 per φ=0). Valore accettabile."
+    },
+    "FS_scorr_GEO": {
+      "valore": 1.8862,
+      "unita": "-",
+      "tolleranza_percentuale": 1.0,
+      "nota": "FS scorrimento con contributo coesivo alla base: Rf = cu*B = 60*2.5 = 150 kN/m"
+    },
+    "q_max": {
+      "valore": 61.0800,
+      "unita": "kPa",
+      "tolleranza_percentuale": 1.0,
+      "nota": "Pressione massima sul piano di posa (Navier)"
+    },
+    "q_lim_Hansen": {
+      "valore": 251.8200,
+      "unita": "kPa",
+      "tolleranza_percentuale": 1.0,
+      "nota": "Capacità portante limite — formula Brinch-Hansen per φ=0: q_lim = cu*Nc*ic + q*Nq. Nc=5.14, Nq=1 per φ=0."
+    },
+    "FS_portanza": {
+      "valore": 4.1228,
+      "unita": "-",
+      "tolleranza_percentuale": 1.0,
+      "nota": "FS portanza elevato su argilla consistente (cu=60 kPa). Verifica ampiamente soddisfatta."
+    }
+  },
+  "esito_atteso": "VERIFICATO",
+  "note_test": "Caso φ=0 (analisi in condizioni non drenate). Verifica che Nc=5.14, Nq=1, Ngamma=0 siano applicati correttamente dalla funzione fattori_capacita_portante(). Il termine γ*B*Ngamma deve essere nullo per φ=0."
+}

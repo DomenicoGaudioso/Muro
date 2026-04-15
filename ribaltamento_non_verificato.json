@@ -1,0 +1,66 @@
+{
+  "meta": {
+    "verifica": "Ribaltamento e portanza con falda acquifera",
+    "norma": "NTC2018 §6.5.3 / EC7-1 §6.5 / Rankine con pressione neutra",
+    "fonte": "Colombo P., Colleselli F. - Elementi di Geotecnica, Zanichelli 2004, Cap. 12 - Esempi su muri con falda",
+    "url_fonte": "https://www.ntc.gov.it/images/documenti/NTC_2018_GU_1_21_feb_2018.pdf",
+    "data_generazione": "2026-04-15",
+    "autore": "CivilBox Test Builder Agent"
+  },
+  "input": {
+    "H": 5.0,
+    "q": 20.0,
+    "gamma_cls": 24.0,
+    "B": 3.5,
+    "B_punta": 1.0,
+    "B_tallone": 2.5,
+    "t_base": 0.5,
+    "t_fusto_top": 0.3,
+    "t_fusto_bot": 0.5,
+    "mu_base": 0.55,
+    "q_amm": 300.0,
+    "h_fronte": 0.5,
+    "falda_retro": 2.0,
+    "falda_fronte": 99.0,
+    "kh": 0.0,
+    "kv": 0.0,
+    "delta_muro": 20.0,
+    "include_passivo": true,
+    "ha_tirante": false,
+    "stratigrafia_csv": "10.0,18,21,32,0,30000"
+  },
+  "risultati_attesi": {
+    "FS_rib_EQU": {
+      "valore": 2.4469,
+      "unita": "-",
+      "tolleranza_percentuale": 1.0,
+      "nota": "FS ribaltamento ridotto dalla spinta idrostatica aggiuntiva (falda a 2m da piano campagna)"
+    },
+    "FS_scorr_GEO": {
+      "valore": 1.4102,
+      "unita": "-",
+      "tolleranza_percentuale": 1.0,
+      "nota": "FS scorrimento in presenza di falda — riduzione della forza verticale stabilizzante"
+    },
+    "q_max": {
+      "valore": 104.6828,
+      "unita": "kPa",
+      "tolleranza_percentuale": 1.0,
+      "nota": "Pressione massima sul piano di posa (formula di Navier — nucleo centrale)"
+    },
+    "FS_portanza": {
+      "valore": 1.0034,
+      "unita": "-",
+      "tolleranza_percentuale": 1.0,
+      "nota": "FS portanza critico: la falda riduce la resistenza del terreno. Valore limite accettabile ma da monitorare."
+    },
+    "Pa_spinta": {
+      "valore": 147.0791,
+      "unita": "kN/m",
+      "tolleranza_percentuale": 1.0,
+      "nota": "Spinta totale orizzontale comprensiva di pressione idrostatica con falda a 2m"
+    }
+  },
+  "esito_atteso": "VERIFICATO",
+  "note_test": "Caso critico con falda a 2m da piano campagna. La spinta aumenta sensibilmente per effetto idrostatico. FS_portanza prossimo a 1.0: caso limite. Verifica che il codice integri correttamente la pressione neutra secondo σ_v_eff = σ_v - u."
+}

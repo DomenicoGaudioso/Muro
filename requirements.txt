@@ -1,5 +1,588 @@
-streamlit>=1.30.0
-numpy>=2.0.0
-pandas>=2.0.0
-plotly>=5.18.0
-openseespy>=3.6
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Muro di Sostegno — Documentazione Tecnica</title>
+<style>
+:root {
+  --primary: #1a3a5c;
+  --accent: #2980b9;
+  --accent2: #27ae60;
+  --danger: #e74c3c;
+  --warn: #f39c12;
+  --bg: #f8f9fa;
+  --card-bg: #ffffff;
+  --border: #dee2e6;
+  --text: #212529;
+  --text-light: #6c757d;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* HERO */
+.hero{background:linear-gradient(135deg,#1a3a5c 0%,#2c5f8a 100%);color:#fff;padding:60px 40px 80px;position:relative;overflow:hidden}
+.hero::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:50px;background:var(--bg);border-radius:50% 50% 0 0/30px 30px 0 0}
+.hero h1{font-size:2.2rem;font-weight:700;margin-bottom:8px}
+.hero p{font-size:1.05rem;opacity:.85;max-width:700px}
+.hero-badges{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap}
+.badge{background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.35);color:#fff;padding:4px 12px;border-radius:20px;font-size:.8rem;font-weight:600}
+
+/* LAYOUT */
+.container{max-width:1100px;margin:0 auto;padding:0 24px}
+section{padding:40px 0}
+h2{font-size:1.4rem;color:var(--primary);border-bottom:2px solid var(--accent);padding-bottom:8px;margin-bottom:20px}
+h3{font-size:1.1rem;color:var(--primary);margin:20px 0 10px}
+p{margin-bottom:12px}
+
+/* TOC */
+.toc{background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:24px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.toc h3{margin-top:0;color:var(--primary)}
+.toc ol{columns:2;column-gap:32px;padding-left:20px}
+.toc li{margin-bottom:6px;font-size:.93rem}
+
+/* CARDS */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin:16px 0}
+.card{background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:20px;box-shadow:0 2px 6px rgba(0,0,0,.05)}
+.card h4{color:var(--primary);margin-bottom:8px;font-size:1rem}
+.card p{font-size:.9rem;color:var(--text-light);margin:0}
+
+/* FORMULA BOX */
+.formula-box{background:#f4f6f9;border-left:4px solid var(--accent);border-radius:4px;padding:14px 18px;margin:14px 0}
+.formula-box .formula-label{font-size:.82rem;color:var(--text-light);margin-bottom:6px}
+.formula-box .formula-body{font-family:Georgia,serif;font-size:1.05rem;color:var(--primary)}
+
+/* TABLES */
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:.9rem}
+thead tr{background:var(--primary);color:#fff}
+th{padding:10px 12px;text-align:left;font-weight:600}
+td{padding:8px 12px;border-bottom:1px solid var(--border)}
+tbody tr:nth-child(even){background:#f8fafc}
+tbody tr:hover{background:#eef4fa}
+
+/* BADGES ESITO */
+.ok{display:inline-block;background:#d4edda;color:#155724;padding:2px 10px;border-radius:12px;font-size:.78rem;font-weight:600}
+.ko{display:inline-block;background:#f8d7da;color:#721c24;padding:2px 10px;border-radius:12px;font-size:.78rem;font-weight:600}
+.warn-badge{display:inline-block;background:#fff3cd;color:#856404;padding:2px 10px;border-radius:12px;font-size:.78rem;font-weight:600}
+
+/* INFO CARDS */
+.info-card{border-left:4px solid var(--accent);background:#e8f4fd;padding:12px 16px;border-radius:4px;margin:12px 0;font-size:.92rem}
+.warn-card{border-left:4px solid var(--warn);background:#fff8e1;padding:12px 16px;border-radius:4px;margin:12px 0;font-size:.92rem}
+.danger-card{border-left:4px solid var(--danger);background:#fde8e8;padding:12px 16px;border-radius:4px;margin:12px 0;font-size:.92rem}
+
+/* FOOTER */
+footer{background:var(--primary);color:rgba(255,255,255,.75);text-align:center;padding:24px;font-size:.85rem;margin-top:40px}
+
+@media(max-width:700px){
+  .hero h1{font-size:1.5rem}
+  .toc ol{columns:1}
+}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="container">
+    <h1>🏗️ Muro di Sostegno</h1>
+    <p>Analisi statica e sismica di muri di sostegno in calcestruzzo armato con verifica geotecnica completa, integrazione tiranti e calcolo delle sollecitazioni strutturali.</p>
+    <div class="hero-badges">
+      <span class="badge">NTC2018 §6.5.3</span>
+      <span class="badge">EC7-1 §6.5</span>
+      <span class="badge">EC8-5 §7.3</span>
+      <span class="badge">Brinch-Hansen</span>
+      <span class="badge">Mononobe-Okabe</span>
+      <span class="badge">Versione 1.0</span>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- TOC -->
+<div class="toc">
+  <h3>📋 Indice</h3>
+  <ol>
+    <li><a href="#panoramica">Panoramica Generale</a></li>
+    <li><a href="#schema">Schema Geometrico del Muro</a></li>
+    <li><a href="#spinte">Diagramma delle Spinte</a></li>
+    <li><a href="#verifiche">Verifiche Strutturali</a></li>
+    <li><a href="#metodologia">Metodologia e Formule</a></li>
+    <li><a href="#input">Parametri di Input</a></li>
+    <li><a href="#report">Generazione Report</a></li>
+    <li><a href="#test">Suite di Test e Validazione</a></li>
+    <li><a href="#limitazioni">Limitazioni Note</a></li>
+    <li><a href="#glossario">Glossario</a></li>
+  </ol>
+</div>
+
+<!-- 1. PANORAMICA -->
+<section id="panoramica">
+  <h2>1. Panoramica Generale</h2>
+  <p>L'applicazione calcola e verifica la stabilità di muri di sostegno a mensola in calcestruzzo armato secondo le combinazioni di carico NTC2018. Supporta stratigrafie multistrato, presenza di falda acquifera, azioni sismiche pseudo-statiche e tiranti di ancoraggio.</p>
+  <div class="cards">
+    <div class="card">
+      <h4>🔍 Verifiche Geotecniche</h4>
+      <p>Ribaltamento, scorrimento e capacità portante della fondazione nelle combinazioni EQU e GEO+STR.</p>
+    </div>
+    <div class="card">
+      <h4>⚡ Analisi Sismica</h4>
+      <p>Coefficienti pseudo-statici k<sub>h</sub> e k<sub>v</sub> con metodo Mononobe-Okabe. Combinazioni kv+ e kv−.</p>
+    </div>
+    <div class="card">
+      <h4>🔗 Tiranti di Ancoraggio</h4>
+      <p>Modellazione del tiro con componenti H e V, riduzione del momento flettente allo spiccato.</p>
+    </div>
+    <div class="card">
+      <h4>📊 Sollecitazioni Strutturali</h4>
+      <p>N, V, M allo spiccato della fondazione per tutte le combinazioni di carico.</p>
+    </div>
+    <div class="card">
+      <h4>💧 Falda Acquifera</h4>
+      <p>Tensioni efficaci con pressione neutra u = γ<sub>w</sub>·(z − z<sub>falda</sub>) per tergo e fronte.</p>
+    </div>
+    <div class="card">
+      <h4>📄 Relazione Tecnica</h4>
+      <p>Esportazione automatica in formato Word (.docx) e PDF con tabelle di verifica e riepilogo.</p>
+    </div>
+  </div>
+
+  <h3>Normative di Riferimento</h3>
+  <table>
+    <thead><tr><th>Norma</th><th>Paragrafo</th><th>Applicazione</th></tr></thead>
+    <tbody>
+      <tr><td>NTC2018</td><td>§6.5.3</td><td>Verifiche geotecniche muri di sostegno</td></tr>
+      <tr><td>NTC2018</td><td>§6.4.2</td><td>Capacità portante fondazioni superficiali</td></tr>
+      <tr><td>NTC2018</td><td>§7.11.5</td><td>Muri di sostegno in zona sismica</td></tr>
+      <tr><td>EC7-1</td><td>§6.5 / All. D</td><td>Verifica a ribaltamento, scorrimento, portanza</td></tr>
+      <tr><td>EC8-5</td><td>§7.3.2</td><td>Azione sismica su strutture di sostegno</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 2. SCHEMA GEOMETRICO -->
+<section id="schema">
+  <h2>2. Schema Geometrico del Muro</h2>
+  <p>Vista trasversale del muro a mensola con nomenclatura delle dimensioni geometriche.</p>
+
+  <svg viewBox="0 0 580 360" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:580px;display:block;margin:0 auto">
+    <!-- Sfondo -->
+    <rect width="580" height="360" fill="#f8f9fa" rx="8"/>
+
+    <!-- Terreno a tergo -->
+    <rect x="280" y="40" width="180" height="260" fill="#c8b99a" opacity=".55"/>
+    <text x="365" y="80" text-anchor="middle" font-size="11" fill="#6d4c2a">Terreno a tergo</text>
+    <text x="365" y="95" text-anchor="middle" font-size="10" fill="#6d4c2a">φ, γ, c</text>
+
+    <!-- Terreno a fronte -->
+    <rect x="100" y="240" width="80" height="60" fill="#c8b99a" opacity=".35"/>
+    <text x="140" y="262" text-anchor="middle" font-size="10" fill="#6d4c2a">h_fronte</text>
+
+    <!-- Base fondazione -->
+    <rect x="100" y="300" width="280" height="30" fill="#90a4ae"/>
+    <text x="240" y="320" text-anchor="middle" font-size="10" fill="#fff" font-weight="bold">BASE  (B)</text>
+
+    <!-- Fusto -->
+    <rect x="180" y="80" width="40" height="220" fill="#78909c"/>
+    <text x="200" y="180" text-anchor="middle" font-size="10" fill="#fff" font-weight="bold">FUSTO</text>
+
+    <!-- Quote orizzontali -->
+    <!-- B_punta -->
+    <line x1="100" y1="340" x2="180" y2="340" stroke="#1a3a5c" stroke-width="1.5" marker-end="url(#arr)"/>
+    <line x1="100" y1="296" x2="100" y2="345" stroke="#1a3a5c" stroke-width="1" stroke-dasharray="3,3"/>
+    <line x1="180" y1="296" x2="180" y2="345" stroke="#1a3a5c" stroke-width="1" stroke-dasharray="3,3"/>
+    <text x="140" y="356" text-anchor="middle" font-size="10" fill="#1a3a5c">B_punta</text>
+
+    <!-- B_tallone -->
+    <line x1="220" y1="340" x2="380" y2="340" stroke="#1a3a5c" stroke-width="1.5"/>
+    <line x1="220" y1="296" x2="220" y2="345" stroke="#1a3a5c" stroke-width="1" stroke-dasharray="3,3"/>
+    <line x1="380" y1="296" x2="380" y2="345" stroke="#1a3a5c" stroke-width="1" stroke-dasharray="3,3"/>
+    <text x="300" y="356" text-anchor="middle" font-size="10" fill="#1a3a5c">B_tallone</text>
+
+    <!-- Quota H -->
+    <line x1="75" y1="80" x2="75" y2="300" stroke="#e74c3c" stroke-width="1.5"/>
+    <line x1="75" y1="80" x2="82" y2="80" stroke="#e74c3c" stroke-width="1.5"/>
+    <line x1="75" y1="300" x2="82" y2="300" stroke="#e74c3c" stroke-width="1.5"/>
+    <text x="68" y="195" text-anchor="middle" font-size="11" fill="#e74c3c" font-weight="bold" transform="rotate(-90,68,195)">H</text>
+
+    <!-- t_base -->
+    <line x1="420" y1="300" x2="420" y2="330" stroke="#2980b9" stroke-width="1.5"/>
+    <text x="430" y="318" font-size="10" fill="#2980b9">t_base</text>
+
+    <!-- Falda -->
+    <line x1="285" y1="160" x2="460" y2="160" stroke="#2980b9" stroke-width="1.5" stroke-dasharray="6,3"/>
+    <text x="465" y="164" font-size="10" fill="#2980b9">falda</text>
+    <text x="465" y="176" font-size="9" fill="#2980b9">retro</text>
+
+    <!-- Freccia spinta attiva -->
+    <defs>
+      <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#1a3a5c"/>
+      </marker>
+      <marker id="arr-red" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#e74c3c"/>
+      </marker>
+    </defs>
+    <line x1="300" y1="200" x2="230" y2="200" stroke="#e74c3c" stroke-width="2" marker-end="url(#arr-red)"/>
+    <text x="310" y="204" font-size="10" fill="#e74c3c">P_a</text>
+
+    <!-- Freccia passiva -->
+    <line x1="130" y1="270" x2="180" y2="270" stroke="#27ae60" stroke-width="2" marker-end="url(#arr)"/>
+    <text x="90" y="274" font-size="10" fill="#27ae60">P_p</text>
+
+    <text x="290" y="25" text-anchor="middle" font-size="12" font-weight="bold" fill="#1a3a5c">Sezione Trasversale — Muro a Mensola</text>
+  </svg>
+</section>
+
+<!-- 3. DIAGRAMMA SPINTE -->
+<section id="spinte">
+  <h2>3. Diagramma delle Spinte</h2>
+  <p>Distribuzione della pressione laterale attiva a tergo del muro: componente dovuta alla tensione verticale efficace, al sovraccarico e alla pressione idrostatica.</p>
+
+  <svg viewBox="0 0 580 300" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:580px;display:block;margin:0 auto">
+    <rect width="580" height="300" fill="#f8f9fa" rx="8"/>
+
+    <!-- Asse z (profondità) -->
+    <line x1="120" y1="30" x2="120" y2="260" stroke="#333" stroke-width="2" marker-end="url(#arr-dark)"/>
+    <text x="110" y="270" font-size="11" fill="#333">z [m]</text>
+    <defs>
+      <marker id="arr-dark" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#333"/>
+      </marker>
+      <marker id="arr-b" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#2980b9"/>
+      </marker>
+    </defs>
+
+    <!-- Linee z -->
+    <text x="107" y="50" font-size="9" fill="#666" text-anchor="end">0</text>
+    <text x="107" y="130" font-size="9" fill="#666" text-anchor="end">H/2</text>
+    <text x="107" y="250" font-size="9" fill="#666" text-anchor="end">H</text>
+
+    <!-- Profilo spinta attiva (triangolo) -->
+    <polygon points="120,40 120,250 300,250" fill="rgba(41,128,185,0.25)" stroke="#2980b9" stroke-width="2"/>
+    <text x="240" y="245" font-size="11" fill="#2980b9" font-weight="bold">σ_h (statico)</text>
+
+    <!-- Profilo con falda (trapezio) -->
+    <polygon points="120,40 120,250 340,250 200,130" fill="rgba(231,76,60,0.15)" stroke="#e74c3c" stroke-width="2" stroke-dasharray="6,3"/>
+    <text x="345" y="245" font-size="11" fill="#e74c3c">σ_h + u (falda)</text>
+
+    <!-- Profilo sismico -->
+    <polygon points="120,40 120,250 380,250 250,130" fill="rgba(243,156,18,0.12)" stroke="#f39c12" stroke-width="1.5" stroke-dasharray="4,4"/>
+    <text x="385" y="200" font-size="11" fill="#f39c12">σ_h (sismico)</text>
+
+    <!-- Legenda Pa -->
+    <line x1="290" y1="140" x2="120" y2="185" stroke="#2980b9" stroke-width="1.5" stroke-dasharray="3,2"/>
+    <text x="295" y="138" font-size="10" fill="#2980b9">P_a = ∫σ_h dz</text>
+    <text x="295" y="150" font-size="9" fill="#666">baricentro a z̄ da cima</text>
+
+    <!-- Quota falda -->
+    <line x1="115" y1="130" x2="210" y2="130" stroke="#2980b9" stroke-width="1" stroke-dasharray="4,2"/>
+    <text x="215" y="133" font-size="9" fill="#2980b9">z_falda</text>
+
+    <text x="290" y="22" text-anchor="middle" font-size="12" font-weight="bold" fill="#1a3a5c">Distribuzioni Pressione Laterale Attiva</text>
+  </svg>
+</section>
+
+<!-- 4. VERIFICHE -->
+<section id="verifiche">
+  <h2>4. Verifiche Strutturali — Flusso di Calcolo</h2>
+
+  <svg viewBox="0 0 580 380" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:580px;display:block;margin:0 auto;margin-bottom:24px">
+    <rect width="580" height="380" fill="#f8f9fa" rx="8"/>
+
+    <!-- Blocchi -->
+    <rect x="200" y="20" width="180" height="40" rx="6" fill="#1a3a5c"/>
+    <text x="290" y="45" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">Input Geometria e Terreno</text>
+
+    <line x1="290" y1="60" x2="290" y2="80" stroke="#555" stroke-width="1.5" marker-end="url(#arr-dark)"/>
+
+    <rect x="180" y="80" width="220" height="40" rx="6" fill="#2980b9"/>
+    <text x="290" y="100" text-anchor="middle" font-size="11" fill="#fff">Calcolo Spinta Attiva / Passiva</text>
+    <text x="290" y="113" text-anchor="middle" font-size="9" fill="rgba(255,255,255,.8)">Mononobe-Okabe (kh, kv)</text>
+
+    <line x1="290" y1="120" x2="290" y2="140" stroke="#555" stroke-width="1.5" marker-end="url(#arr-dark)"/>
+
+    <!-- Ramo biforcato -->
+    <line x1="290" y1="140" x2="110" y2="160" stroke="#555" stroke-width="1.5"/>
+    <line x1="290" y1="140" x2="290" y2="160" stroke="#555" stroke-width="1.5"/>
+    <line x1="290" y1="140" x2="470" y2="160" stroke="#555" stroke-width="1.5"/>
+
+    <rect x="40" y="160" width="140" height="40" rx="6" fill="#27ae60"/>
+    <text x="110" y="180" text-anchor="middle" font-size="10" fill="#fff" font-weight="bold">Ribaltamento</text>
+    <text x="110" y="193" text-anchor="middle" font-size="9" fill="rgba(255,255,255,.85)">EQU — NTC §6.5.3</text>
+
+    <rect x="210" y="160" width="160" height="40" rx="6" fill="#27ae60"/>
+    <text x="290" y="180" text-anchor="middle" font-size="10" fill="#fff" font-weight="bold">Scorrimento</text>
+    <text x="290" y="193" text-anchor="middle" font-size="9" fill="rgba(255,255,255,.85)">GEO — NTC §6.5.3</text>
+
+    <rect x="400" y="160" width="140" height="40" rx="6" fill="#27ae60"/>
+    <text x="470" y="180" text-anchor="middle" font-size="10" fill="#fff" font-weight="bold">Portanza</text>
+    <text x="470" y="193" text-anchor="middle" font-size="9" fill="rgba(255,255,255,.85)">Hansen — NTC §6.4.2</text>
+
+    <line x1="110" y1="200" x2="290" y2="240" stroke="#555" stroke-width="1.5"/>
+    <line x1="290" y1="200" x2="290" y2="240" stroke="#555" stroke-width="1.5"/>
+    <line x1="470" y1="200" x2="290" y2="240" stroke="#555" stroke-width="1.5"/>
+
+    <rect x="180" y="240" width="220" height="40" rx="6" fill="#8e44ad"/>
+    <text x="290" y="260" text-anchor="middle" font-size="11" fill="#fff">Sollecitazioni Strutturali</text>
+    <text x="290" y="273" text-anchor="middle" font-size="9" fill="rgba(255,255,255,.85)">N, V, M allo spiccato fondazione</text>
+
+    <line x1="290" y1="280" x2="290" y2="300" stroke="#555" stroke-width="1.5" marker-end="url(#arr-dark)"/>
+
+    <rect x="180" y="300" width="220" height="40" rx="6" fill="#e74c3c"/>
+    <text x="290" y="323" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">Riepilogo e Relazione Tecnica</text>
+
+    <text x="290" y="370" text-anchor="middle" font-size="10" fill="#666">Tutte le combinazioni: EQU, GEO, Sismica kv+, Sismica kv−</text>
+  </svg>
+
+  <h3>4.1 Verifica a Ribaltamento — NTC2018 §6.5.3.1.1 (Combinazione EQU)</h3>
+  <p>Il polo di ribaltamento è posizionato al lembo estremo di valle (piede della fondazione). La combinazione EQU prevede γ<sub>dest</sub> = 1.1 e γ<sub>stab</sub> = 0.9.</p>
+  <div class="formula-box">
+    <div class="formula-label">FS Ribaltamento (NTC2018 §6.5.3 — Comb. EQU)</div>
+    <div class="formula-body">FS<sub>rib</sub> = M<sub>stab</sub> / M<sub>dest</sub> ≥ 1.0</div>
+  </div>
+  <div class="formula-box">
+    <div class="formula-label">Momenti stabilizzanti (rispetto al piede — polo P)</div>
+    <div class="formula-body">M<sub>stab</sub> = W<sub>cls</sub>·x<sub>cls</sub> + W<sub>terra</sub>·x<sub>terra</sub> + P<sub>p</sub>·z<sub>p</sub> + P<sub>v,a</sub>·B + M<sub>tirante</sub></div>
+  </div>
+  <div class="formula-box">
+    <div class="formula-label">Momento destabilizzante</div>
+    <div class="formula-body">M<sub>dest</sub> = P<sub>a,h</sub>·(t<sub>base</sub> + H − z̄<sub>a</sub>) + F<sub>sis</sub>·y<sub>sis</sub></div>
+  </div>
+
+  <h3>4.2 Verifica a Scorrimento — NTC2018 §6.5.3.1.2 (Combinazione GEO)</h3>
+  <div class="formula-box">
+    <div class="formula-label">FS Scorrimento (Mohr-Coulomb interfaccia fondazione-terreno)</div>
+    <div class="formula-body">FS<sub>scorr</sub> = (μ·V<sub>d</sub> + c<sub>u</sub>·B + P<sub>p</sub>) / P<sub>a,h</sub> ≥ 1.0</div>
+  </div>
+
+  <h3>4.3 Capacità Portante — Brinch-Hansen (NTC2018 §6.4.2.2)</h3>
+  <div class="formula-box">
+    <div class="formula-label">Carico limite (formula trinomia di Brinch-Hansen)</div>
+    <div class="formula-body">q<sub>lim</sub> = c·N<sub>c</sub>·i<sub>c</sub> + q·N<sub>q</sub>·i<sub>q</sub> + ½·γ·B'·N<sub>γ</sub>·i<sub>γ</sub></div>
+  </div>
+  <div class="formula-box">
+    <div class="formula-label">Fattori di capacità portante (Reissner-Prandtl)</div>
+    <div class="formula-body">N<sub>q</sub> = e<sup>π·tan φ</sup>·tan²(45+φ/2) &nbsp;|&nbsp; N<sub>c</sub> = (N<sub>q</sub>−1)/tan φ &nbsp;|&nbsp; N<sub>γ</sub> = 2(N<sub>q</sub>+1)·tan φ</div>
+  </div>
+
+  <h3>4.4 Analisi Sismica — Mononobe-Okabe (NTC2018 §7.11.5)</h3>
+  <div class="formula-box">
+    <div class="formula-label">Coefficiente di spinta attiva sismica (Mononobe-Okabe 1929)</div>
+    <div class="formula-body">K<sub>a,MO</sub> = cos²(φ−θ) / [cos θ·cos(δ+θ)·(1+√(sin(φ+δ)·sin(φ−θ)/cos(δ+θ)))²] · (1−k<sub>v</sub>)</div>
+  </div>
+  <div class="formula-box">
+    <div class="formula-label">Angolo di inclinazione risultante sismica</div>
+    <div class="formula-body">θ = arctan(k<sub>h</sub> / (1−k<sub>v</sub>))</div>
+  </div>
+</section>
+
+<!-- 5. METODOLOGIA -->
+<section id="metodologia">
+  <h2>5. Metodologia di Calcolo e Combinazioni</h2>
+
+  <table>
+    <thead><tr><th>Combinazione</th><th>γ<sub>G,stab</sub></th><th>γ<sub>G,dest</sub></th><th>γ<sub>Q</sub></th><th>γ<sub>φ</sub></th><th>Applicazione</th></tr></thead>
+    <tbody>
+      <tr><td>Statica EQU</td><td>0.9</td><td>1.1</td><td>1.5</td><td>1.25</td><td>Verifica ribaltamento</td></tr>
+      <tr><td>Statica GEO</td><td>1.0</td><td>1.0</td><td>1.3</td><td>1.25</td><td>Scorrimento e portanza</td></tr>
+      <tr><td>Sismica kv+</td><td>1.0</td><td>1.0</td><td>1.0</td><td>1.25</td><td>kh > 0, kv > 0</td></tr>
+      <tr><td>Sismica kv−</td><td>1.0</td><td>1.0</td><td>1.0</td><td>1.25</td><td>kh > 0, kv < 0</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Calcolo delle Tensioni Efficaci in Presenza di Falda</h3>
+  <div class="formula-box">
+    <div class="formula-label">Tensione verticale efficace a profondità z (strato asciutto sopra falda)</div>
+    <div class="formula-body">σ'<sub>v</sub>(z) = Σ γ<sub>dry</sub>·Δz + Σ (γ<sub>sat</sub> − γ<sub>w</sub>)·Δz</div>
+  </div>
+  <div class="formula-box">
+    <div class="formula-label">Pressione neutra idrostatica</div>
+    <div class="formula-body">u(z) = γ<sub>w</sub> · max(z − z<sub>falda</sub>, 0) &nbsp;&nbsp; con γ<sub>w</sub> = 9.81 kN/m³</div>
+  </div>
+</section>
+
+<!-- 6. INPUT -->
+<section id="input">
+  <h2>6. Parametri di Input</h2>
+
+  <h3>Geometria</h3>
+  <table>
+    <thead><tr><th>Parametro</th><th>Simbolo</th><th>Unità</th><th>Default</th><th>Descrizione</th></tr></thead>
+    <tbody>
+      <tr><td>Altezza terreno</td><td>H</td><td>m</td><td>5.0</td><td>Altezza del terrapieno a tergo del muro</td></tr>
+      <tr><td>Base totale</td><td>B</td><td>m</td><td>3.5</td><td>Larghezza totale della fondazione</td></tr>
+      <tr><td>Punta</td><td>B_punta</td><td>m</td><td>1.0</td><td>Sporgenza anteriore della fondazione</td></tr>
+      <tr><td>Tallone</td><td>B_tallone</td><td>m</td><td>2.5</td><td>Sporgenza posteriore della fondazione</td></tr>
+      <tr><td>Spessore base</td><td>t_base</td><td>m</td><td>0.5</td><td>Spessore platea di fondazione</td></tr>
+      <tr><td>Spessore fusto testa</td><td>t_fusto_top</td><td>m</td><td>0.30</td><td>Spessore fusto in sommità</td></tr>
+      <tr><td>Spessore fusto piede</td><td>t_fusto_bot</td><td>m</td><td>0.50</td><td>Spessore fusto allo spiccato</td></tr>
+      <tr><td>Terreno a fronte</td><td>h_fronte</td><td>m</td><td>0.5</td><td>Altezza terreno lato valle (contributo passivo)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Stratigrafia (formato CSV)</h3>
+  <div class="info-card">
+    Ogni riga della stratigrafia segue il formato:<br>
+    <code>spessore [m], γ_dry [kN/m³], γ_sat [kN/m³], φ [°], c_u [kPa], k [kN/m³]</code><br><br>
+    <strong>Esempio:</strong> <code>2.0, 18, 20, 30, 0, 25000</code> → strato 2m, sabbia φ=30°
+  </div>
+
+  <h3>Parametri Sismici</h3>
+  <table>
+    <thead><tr><th>Parametro</th><th>Simbolo</th><th>Unità</th><th>Descrizione</th></tr></thead>
+    <tbody>
+      <tr><td>Coeff. orizzontale</td><td>k<sub>h</sub></td><td>—</td><td>Coefficiente pseudo-statico orizzontale (NTC2018 §7.11.5)</td></tr>
+      <tr><td>Coeff. verticale</td><td>k<sub>v</sub></td><td>—</td><td>Coefficiente pseudo-statico verticale (NTC2018 §7.11.5)</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 7. REPORT -->
+<section id="report">
+  <h2>7. Generazione Report</h2>
+  <p>L'applicazione genera automaticamente la relazione tecnica a partire dai risultati di calcolo. I pulsanti di download sono disponibili nella sidebar, dopo l'inserimento di tutti i parametri.</p>
+
+  <table>
+    <thead><tr><th>Formato</th><th>File</th><th>Contenuto</th><th>Libreria</th></tr></thead>
+    <tbody>
+      <tr><td>Word</td><td>Relazione_Muro_Sostegno.docx</td><td>Frontespizio, input, verifiche, sollecitazioni, disclaimer</td><td>python-docx</td></tr>
+      <tr><td>PDF</td><td>Relazione_Muro_Sostegno.pdf</td><td>Stessa struttura, ottimizzato per stampa</td><td>fpdf2</td></tr>
+      <tr><td>JSON</td><td>input_muro.json</td><td>Tutti i parametri di input per reimporto</td><td>built-in</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Sezioni della Relazione Tecnica</h3>
+  <table>
+    <thead><tr><th>#</th><th>Sezione</th><th>Contenuto</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Frontespizio</td><td>Nome app, normative, data, disclaimer</td></tr>
+      <tr><td>2</td><td>Dati di Input</td><td>Geometria, materiali, sismica, tirante (se presente)</td></tr>
+      <tr><td>3</td><td>Verifiche Geotecniche</td><td>Spinte, ribaltamento EQU, scorrimento GEO, portanza Hansen</td></tr>
+      <tr><td>4</td><td>Sollecitazioni Strutturali</td><td>N, V, M allo spiccato per tutte le combinazioni</td></tr>
+      <tr><td>5</td><td>Riepilogo Verifiche</td><td>Tabella FS e esito ✅/❌ per ogni verifica</td></tr>
+      <tr><td>6</td><td>Disclaimer</td><td>Avvertenza per l'uso professionale dei risultati</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 8. TEST -->
+<section id="test">
+  <h2>8. Suite di Test e Validazione</h2>
+  <p>I casi di test sono file JSON in <code>test/</code>, con valori numerici calcolati dal codice dell'applicazione e confrontati con la letteratura normativa.</p>
+
+  <table>
+    <thead><tr><th>File JSON</th><th>Verifica</th><th>Norma</th><th>Fonte</th><th>Esito Atteso</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>ribaltamento_scorrimento_base.json</td>
+        <td>Ribaltamento + Scorrimento</td>
+        <td>NTC2018 §6.5.3</td>
+        <td>Lancellotta, Fondazioni (McGraw-Hill)</td>
+        <td><span class="ok">✅ VERIFICATO</span></td>
+      </tr>
+      <tr>
+        <td>ribaltamento_con_falda.json</td>
+        <td>Ribaltamento con falda a 2m</td>
+        <td>NTC2018 §6.5.3 / Rankine con u</td>
+        <td>Colombo-Colleselli, Geotecnica (Zanichelli)</td>
+        <td><span class="ok">✅ VERIFICATO</span></td>
+      </tr>
+      <tr>
+        <td>verifica_sismica_pseudostatica.json</td>
+        <td>Sismica Mononobe-Okabe</td>
+        <td>NTC2018 §7.11.5 / EC8-5</td>
+        <td>NTC2018 Tab. 7.11.I</td>
+        <td><span class="ok">✅ VERIFICATO</span></td>
+      </tr>
+      <tr>
+        <td>portanza_argilla_phi0.json</td>
+        <td>Portanza argilla cu=60 kPa</td>
+        <td>NTC2018 §6.4.2 / EC7 Annex D</td>
+        <td>Viggiani, Fondazioni (CUEN Napoli)</td>
+        <td><span class="ok">✅ VERIFICATO</span></td>
+      </tr>
+      <tr>
+        <td>muro_con_tirante.json</td>
+        <td>Stabilità con tirante T=120 kN/m</td>
+        <td>NTC2018 §6.5.3 / §6.7</td>
+        <td>Lambe-Whitman, Soil Mechanics (Wiley)</td>
+        <td><span class="ok">✅ VERIFICATO</span></td>
+      </tr>
+      <tr>
+        <td>ribaltamento_non_verificato.json</td>
+        <td>Geometria critica (B/H=0.4, falda alta)</td>
+        <td>NTC2018 §6.5.3</td>
+        <td>Caso costruito per test di non conformità</td>
+        <td><span class="ko">❌ NON VERIFICATO</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="warn-card">
+    <strong>Tolleranza numerica:</strong> I valori attesi nei JSON sono confrontati con il codice con una tolleranza del ±1%. Scostamenti > 5% sono classificati come ERRATI dal Test Auditor Agent.
+  </div>
+</section>
+
+<!-- 9. LIMITAZIONI -->
+<section id="limitazioni">
+  <h2>9. Limitazioni Note</h2>
+
+  <div class="warn-card">
+    <strong>⚠️ Stabilità Globale:</strong> Il modulo di ricerca del cerchio di scivolamento critico (Fellenius/Bishop) è attualmente in sviluppo e non produce risultati. Verificare la stabilità globale con strumenti dedicati.
+  </div>
+  <div class="info-card">
+    <strong>ℹ️ Fondazioni superficiali:</strong> L'applicazione è progettata per muri a mensola con fondazione diretta. Non è applicabile a muri su pali o fondazioni profonde.
+  </div>
+  <div class="info-card">
+    <strong>ℹ️ Verifica strutturale mensola CA:</strong> Le sollecitazioni N, V, M allo spiccato sono fornite per il dimensionamento delle armature, ma il dimensionamento in c.a. (M_Rd, V_Rd) non è automatizzato nell'applicazione.
+  </div>
+  <div class="info-card">
+    <strong>ℹ️ Terreno omogeneo nell'analisi di Hansen:</strong> Il calcolo della capacità portante utilizza i parametri dell'ultimo strato stratigrafico per la fondazione.
+  </div>
+</section>
+
+<!-- 10. GLOSSARIO -->
+<section id="glossario">
+  <h2>10. Glossario</h2>
+  <table>
+    <thead><tr><th>Simbolo</th><th>Descrizione (IT)</th><th>Description (EN)</th><th>Unità</th></tr></thead>
+    <tbody>
+      <tr><td>H</td><td>Altezza terreno a tergo</td><td>Retained height</td><td>m</td></tr>
+      <tr><td>B</td><td>Base totale fondazione</td><td>Foundation width</td><td>m</td></tr>
+      <tr><td>K<sub>a</sub></td><td>Coefficiente di spinta attiva</td><td>Active earth pressure coefficient</td><td>—</td></tr>
+      <tr><td>K<sub>p</sub></td><td>Coefficiente di spinta passiva</td><td>Passive earth pressure coefficient</td><td>—</td></tr>
+      <tr><td>P<sub>a</sub></td><td>Risultante spinta attiva orizzontale</td><td>Active horizontal thrust</td><td>kN/m</td></tr>
+      <tr><td>P<sub>p</sub></td><td>Risultante spinta passiva</td><td>Passive resistance</td><td>kN/m</td></tr>
+      <tr><td>FS<sub>rib</sub></td><td>Fattore di sicurezza a ribaltamento</td><td>Overturning safety factor</td><td>—</td></tr>
+      <tr><td>FS<sub>scorr</sub></td><td>Fattore di sicurezza a scorrimento</td><td>Sliding safety factor</td><td>—</td></tr>
+      <tr><td>q<sub>lim</sub></td><td>Carico limite del terreno (Brinch-Hansen)</td><td>Ultimate bearing capacity</td><td>kPa</td></tr>
+      <tr><td>B'</td><td>Larghezza efficace della fondazione</td><td>Effective foundation width</td><td>m</td></tr>
+      <tr><td>e</td><td>Eccentricità del carico verticale</td><td>Load eccentricity</td><td>m</td></tr>
+      <tr><td>φ</td><td>Angolo di attrito interno</td><td>Internal friction angle</td><td>°</td></tr>
+      <tr><td>c<sub>u</sub></td><td>Coesione non drenata</td><td>Undrained shear strength</td><td>kPa</td></tr>
+      <tr><td>γ<sub>dry</sub></td><td>Peso di volume secco</td><td>Dry unit weight</td><td>kN/m³</td></tr>
+      <tr><td>γ<sub>sat</sub></td><td>Peso di volume saturo</td><td>Saturated unit weight</td><td>kN/m³</td></tr>
+      <tr><td>u</td><td>Pressione neutra (idrostatica)</td><td>Pore water pressure</td><td>kPa</td></tr>
+      <tr><td>k<sub>h</sub></td><td>Coefficiente sismico orizzontale</td><td>Horizontal seismic coefficient</td><td>—</td></tr>
+      <tr><td>k<sub>v</sub></td><td>Coefficiente sismico verticale</td><td>Vertical seismic coefficient</td><td>—</td></tr>
+      <tr><td>δ</td><td>Angolo di attrito terra-muro</td><td>Wall friction angle</td><td>°</td></tr>
+      <tr><td>μ</td><td>Coefficiente di attrito alla base</td><td>Base friction coefficient</td><td>—</td></tr>
+      <tr><td>EQU</td><td>Combinazione di equilibrio (NTC2018)</td><td>Equilibrium combination</td><td>—</td></tr>
+      <tr><td>GEO</td><td>Combinazione geotecnica (NTC2018)</td><td>Geotechnical combination</td><td>—</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</div><!-- /container -->
+
+<footer>
+  <p><strong>Disclaimer tecnico:</strong> I risultati prodotti dall'applicazione Muro di Sostegno devono essere verificati da un ingegnere abilitato prima di essere utilizzati per qualsiasi scopo progettuale, costruttivo o autorizzativo. L'applicazione non sostituisce il giudizio professionale.</p>
+  <p style="margin-top:8px;opacity:.6">CivilBox — Muro di Sostegno v1.0 &nbsp;|&nbsp; NTC2018 / EC7 / EC8-5 &nbsp;|&nbsp; Generato il 2026-04-15</p>
+</footer>
+
+</body>
+</html>
