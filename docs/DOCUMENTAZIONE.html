@@ -3,160 +3,544 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Muro di Sostegno - Documentazione Tecnica</title>
+<title>Muro di Sostegno - Guida Utente e Documentazione Tecnica</title>
 <style>
 :root {
-  --primary: #17324d;
-  --accent: #2d6a8e;
-  --soft: #eef4f7;
-  --card: #ffffff;
-  --border: #d9e2ea;
-  --text: #1f2933;
-  --muted: #52606d;
+  --navy: #18344c;
+  --teal: #1f6f78;
+  --gold: #b9852f;
+  --sand: #f7f3ec;
+  --paper: #ffffff;
+  --line: #d7e1e8;
+  --text: #23313d;
+  --muted: #60707f;
+  --good: #1d7a50;
+  --warn: #bf7b18;
+  --bad: #ae3b3b;
 }
 * { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
 body {
   margin: 0;
   font-family: "Segoe UI", Arial, sans-serif;
-  background: linear-gradient(180deg, #f6f9fb 0%, #eef3f6 100%);
   color: var(--text);
-  line-height: 1.6;
+  line-height: 1.65;
+  background:
+    radial-gradient(circle at top right, rgba(31,111,120,.10), transparent 22%),
+    radial-gradient(circle at top left, rgba(185,133,47,.10), transparent 18%),
+    linear-gradient(180deg, #f8fafb 0%, #f3f6f8 100%);
 }
+a { color: var(--teal); text-decoration: none; }
+a:hover { text-decoration: underline; }
 .hero {
-  background: linear-gradient(135deg, #17324d 0%, #255176 100%);
+  background: linear-gradient(135deg, #17324c 0%, #25516e 58%, #9f7331 100%);
   color: #fff;
   padding: 56px 24px 64px;
 }
 .wrap {
-  width: min(1080px, calc(100% - 32px));
+  width: min(1150px, calc(100% - 32px));
   margin: 0 auto;
 }
 .hero h1 {
-  margin: 0 0 10px;
-  font-size: 2.3rem;
+  margin: 0 0 12px;
+  font-size: 2.6rem;
+  line-height: 1.02;
 }
 .hero p {
-  max-width: 760px;
   margin: 0;
+  max-width: 840px;
   color: rgba(255,255,255,.88);
+  font-size: 1.04rem;
 }
-.grid {
+.badges {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+.badge {
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.20);
+  color: #fff;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: .80rem;
+}
+.layout {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 16px;
-  margin: 24px 0;
+  grid-template-columns: 270px minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+  margin: 24px auto 36px;
 }
-.card, .panel {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  box-shadow: 0 10px 24px rgba(23, 50, 77, .06);
+.toc, .panel, .card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: 0 12px 28px rgba(21, 42, 58, .05);
+}
+.toc {
+  position: sticky;
+  top: 16px;
+  padding: 18px;
+}
+.toc h2 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  color: var(--navy);
+}
+.toc a {
+  display: block;
+  padding: 7px 0;
+  color: var(--muted);
+  border-bottom: 1px solid rgba(215,225,232,.65);
+  font-size: .95rem;
+}
+.toc a:last-child { border-bottom: none; }
+.content {
+  min-width: 0;
+}
+.panel {
+  padding: 24px;
+  margin-bottom: 20px;
+}
+.intro-grid, .two-col, .cards {
+  display: grid;
+  gap: 16px;
+}
+.intro-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+.cards {
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+.two-col {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 }
 .card {
   padding: 18px;
 }
-.panel {
-  padding: 24px;
-  margin: 24px 0;
+h2, h3 {
+  color: var(--navy);
 }
 h2 {
   margin-top: 0;
-  color: var(--primary);
+  font-size: 1.45rem;
 }
+h3 {
+  margin-bottom: 8px;
+}
+p, li {
+  color: var(--text);
+}
+.muted { color: var(--muted); }
 table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 12px;
+  font-size: .95rem;
 }
 th, td {
   text-align: left;
   padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
 }
 th {
-  background: var(--primary);
+  background: var(--navy);
   color: #fff;
 }
 code {
-  background: var(--soft);
-  padding: 2px 6px;
+  background: #edf4f7;
+  padding: 2px 7px;
   border-radius: 6px;
 }
-.muted {
+.formula {
+  background: linear-gradient(180deg, #f9fbfc 0%, #f4f7f9 100%);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--teal);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin: 12px 0;
+}
+.formula .name {
+  font-size: .82rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
   color: var(--muted);
+  margin-bottom: 6px;
+}
+.formula .expr {
+  font-family: "Cambria Math", Georgia, serif;
+  font-size: 1.08rem;
+  color: var(--navy);
+}
+.step {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.step-num {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--teal), var(--gold));
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+.flag {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: .80rem;
+  font-weight: 600;
+}
+.flag.good { background: rgba(29,122,80,.12); color: var(--good); }
+.flag.warn { background: rgba(191,123,24,.14); color: var(--warn); }
+.flag.bad { background: rgba(174,59,59,.12); color: var(--bad); }
+.diagram {
+  background: #fbfcfd;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px;
+  margin-top: 12px;
+}
+.diagram svg {
+  width: 100%;
+  height: auto;
+  display: block;
 }
 .footer {
-  padding: 24px;
   text-align: center;
   color: var(--muted);
+  padding: 30px 20px 40px;
+}
+@media (max-width: 960px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .toc {
+    position: static;
+  }
 }
 </style>
 </head>
 <body>
+
 <section class="hero">
   <div class="wrap">
     <h1>Muro di Sostegno</h1>
-    <p>Web app Streamlit per verifiche geotecniche e strutturali di muri di sostegno a mensola, con analisi statica, sismica pseudo-statica, falda e tiranti.</p>
+    <p>Guida utente e documentazione tecnica della web app Streamlit per verifiche geotecniche e strutturali di muri di sostegno a mensola: inserimento dati, interpretazione dei risultati, formule di calcolo e lettura dei grafici.</p>
+    <div class="badges">
+      <span class="badge">Streamlit</span>
+      <span class="badge">NTC 2018</span>
+      <span class="badge">Mononobe-Okabe</span>
+      <span class="badge">Brinch-Hansen</span>
+      <span class="badge">Fellenius semplificato</span>
+    </div>
   </div>
 </section>
 
-<main class="wrap">
-  <section class="grid">
-    <article class="card">
-      <h2>Funzioni</h2>
-      <p class="muted">Calcolo spinte attive e passive, verifiche a ribaltamento, scorrimento, portanza e sollecitazioni allo spiccato.</p>
-    </article>
-    <article class="card">
-      <h2>Output</h2>
-      <p class="muted">Grafici Plotly, tabelle riepilogative, export input JSON e relazioni Word/PDF.</p>
-    </article>
-    <article class="card">
-      <h2>Normativa</h2>
-      <p class="muted">Riferimenti operativi a NTC 2018, EC7-1 ed EC8-5 per il modello di verifica implementato.</p>
-    </article>
-  </section>
+<div class="wrap layout">
+  <aside class="toc">
+    <h2>Indice</h2>
+    <a href="#overview">1. Cosa fa l'app</a>
+    <a href="#workflow">2. Come usare l'app</a>
+    <a href="#inputs">3. Significato degli input</a>
+    <a href="#checks">4. Verifiche eseguite</a>
+    <a href="#formulas">5. Formule principali</a>
+    <a href="#graphs">6. Grafici e dashboard</a>
+    <a href="#slope">7. Stabilita del pendio</a>
+    <a href="#tips">8. Consigli operativi</a>
+  </aside>
 
-  <section class="panel">
-    <h2>Avvio rapido</h2>
-    <p>Installa le dipendenze con <code>pip install -r requirements.txt</code> e avvia l'app con <code>streamlit run app.py</code>.</p>
-    <p class="muted">Il file <code>app.py</code> e l'entrypoint ufficiale del progetto.</p>
-  </section>
+  <main class="content">
 
-  <section class="panel">
-    <h2>Parametri principali</h2>
-    <table>
-      <thead>
-        <tr><th>Parametro</th><th>Descrizione</th><th>Unita</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>H</td><td>Altezza del terreno a tergo</td><td>m</td></tr>
-        <tr><td>B</td><td>Base totale della fondazione</td><td>m</td></tr>
-        <tr><td>q</td><td>Sovraccarico uniforme a tergo</td><td>kPa</td></tr>
-        <tr><td>mu_base</td><td>Attrito alla base fondazione-terreno</td><td>-</td></tr>
-        <tr><td>q_amm</td><td>Pressione ammissibile di riferimento</td><td>kPa</td></tr>
-        <tr><td>kh / kv</td><td>Coefficienti sismici pseudo-statici</td><td>-</td></tr>
-      </tbody>
-    </table>
-  </section>
+    <section id="overview" class="panel">
+      <h2>1. Cosa fa l'app</h2>
+      <div class="intro-grid">
+        <div class="card">
+          <h3>Analisi del muro</h3>
+          <p class="muted">Calcola spinte attive e passive del terreno, verifica ribaltamento, scorrimento, pressioni di contatto e portanza della fondazione.</p>
+        </div>
+        <div class="card">
+          <h3>Analisi sismica</h3>
+          <p class="muted">Valuta gli effetti pseudo-statici con coefficienti <code>kh</code> e <code>kv</code>, mostrando le combinazioni statiche e sismiche governanti.</p>
+        </div>
+        <div class="card">
+          <h3>Analisi strutturale</h3>
+          <p class="muted">Fornisce le sollecitazioni allo spiccato del fusto, mantenendo il segno di taglio e momento per una lettura tecnica corretta.</p>
+        </div>
+        <div class="card">
+          <h3>Analisi del pendio</h3>
+          <p class="muted">Ricerca una superficie critica circolare e stima il fattore di sicurezza del pendio a monte con metodo di Fellenius semplificato.</p>
+        </div>
+      </div>
+    </section>
 
-  <section class="panel">
-    <h2>Migliorie introdotte</h2>
-    <table>
-      <thead>
-        <tr><th>Area</th><th>Aggiornamento</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>Struttura progetto</td><td>Ripristinato l'entrypoint Streamlit e separata la documentazione dalle dipendenze.</td></tr>
-        <tr><td>Calcolo</td><td>Il confronto con <code>q_amm</code> entra ora anche nei warning e nei controlli di progetto.</td></tr>
-        <tr><td>Sollecitazioni</td><td>I segni di taglio e momento non vengono piu azzerati, per una lettura tecnica corretta.</td></tr>
-        <tr><td>Report</td><td>Gestione piu robusta dell'export PDF e disclaimer piu professionale.</td></tr>
-      </tbody>
-    </table>
-  </section>
-</main>
+    <section id="workflow" class="panel">
+      <h2>2. Come usare l'app</h2>
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div>
+          <h3>Apri la sidebar e inserisci la geometria del muro</h3>
+          <p>Compila altezza del terreno a tergo <code>H</code>, base totale <code>B</code>, punta, tallone, spessori del fusto e spessore della platea. Se c'e terreno a fronte, inserisci anche <code>h_fronte</code>.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div>
+          <h3>Inserisci carichi e parametri di verifica</h3>
+          <p>Compila il sovraccarico <code>q</code>, il peso di volume del calcestruzzo, l'attrito alla base <code>mu_base</code>, l'attrito terra-muro <code>delta</code> e la pressione ammissibile di riferimento <code>q_amm</code>.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div>
+          <h3>Definisci sismica, falda e stratigrafia</h3>
+          <p>Imposta <code>kh</code> e <code>kv</code>, la profondita della falda a tergo e a fronte, poi compila la stratigrafia nel formato:</p>
+          <p><code>spessore,gamma_dry,gamma_sat,phi,cu,k</code></p>
+          <p class="muted">Una riga = uno strato. Esempio: <code>2.0,18,20,30,0,25000</code></p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <div>
+          <h3>Attiva opzionalmente tiranti e verifica pendio</h3>
+          <p>Se il muro e ancorato, abilita il tirante e inserisci quota, tiro e inclinazione. Se vuoi controllare la stabilita del pendio a monte, attiva la verifica del pendio e imposta altezza, inclinazione e berma.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">5</div>
+        <div>
+          <h3>Leggi i risultati nella dashboard</h3>
+          <p>La schermata principale mostra KPI sintetici, grafici, tabelle di verifica, sollecitazioni e note automatiche. Se necessario, esporta l'input JSON o scarica la relazione Word/PDF.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="inputs" class="panel">
+      <h2>3. Significato degli input</h2>
+      <table>
+        <thead>
+          <tr><th>Campo</th><th>Significato</th><th>Unita</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>H</td><td>Altezza del terreno trattenuto a tergo del muro</td><td>m</td></tr>
+          <tr><td>B</td><td>Base totale della fondazione</td><td>m</td></tr>
+          <tr><td>B_punta / B_tallone</td><td>Larghezze dei due bracci della fondazione</td><td>m</td></tr>
+          <tr><td>t_base</td><td>Spessore della fondazione</td><td>m</td></tr>
+          <tr><td>t_fusto_top / t_fusto_bot</td><td>Spessore del fusto in testa e al piede</td><td>m</td></tr>
+          <tr><td>q</td><td>Sovraccarico distribuito a monte</td><td>kPa</td></tr>
+          <tr><td>mu_base</td><td>Coefficiente di attrito alla base muro-terreno</td><td>-</td></tr>
+          <tr><td>q_amm</td><td>Pressione ammissibile di riferimento da confrontare con <code>q_max</code></td><td>kPa</td></tr>
+          <tr><td>kh / kv</td><td>Coefficienti pseudo-statici dell'azione sismica</td><td>-</td></tr>
+          <tr><td>falda_retro / falda_fronte</td><td>Profondita della falda rispetto al piano campagna</td><td>m</td></tr>
+          <tr><td>phi</td><td>Angolo di attrito interno dello strato</td><td>deg</td></tr>
+          <tr><td>cu</td><td>Coesione non drenata dello strato</td><td>kPa</td></tr>
+          <tr><td>k</td><td>Modulo di reazione inserito a scopo informativo / estensivo</td><td>kN/m³</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="checks" class="panel">
+      <h2>4. Verifiche eseguite</h2>
+      <div class="cards">
+        <div class="card">
+          <h3>Ribaltamento</h3>
+          <p>Confronta il momento stabilizzante con quello ribaltante rispetto al lembo esterno di valle.</p>
+          <span class="flag good">FS piu alto = meglio</span>
+        </div>
+        <div class="card">
+          <h3>Scorrimento</h3>
+          <p>Confronta la resistenza orizzontale disponibile alla base con l'azione spingente del terreno.</p>
+          <span class="flag good">FS piu alto = meglio</span>
+        </div>
+        <div class="card">
+          <h3>Portanza</h3>
+          <p>Calcola <code>q_lim</code> con Brinch-Hansen e verifica il rapporto tra carico limite e pressione massima di contatto.</p>
+          <span class="flag warn">Controllare anche q_max / q_amm</span>
+        </div>
+        <div class="card">
+          <h3>Sollecitazioni strutturali</h3>
+          <p>Fornisce N, V e M allo spiccato del fusto per aiutare il dimensionamento delle armature.</p>
+          <span class="flag warn">Il segno dei risultati va interpretato</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="formulas" class="panel">
+      <h2>5. Formule principali</h2>
+
+      <div class="formula">
+        <div class="name">Spinta attiva di Rankine</div>
+        <div class="expr">K<sub>a</sub> = (1 - sin φ) / (1 + sin φ)</div>
+      </div>
+
+      <div class="formula">
+        <div class="name">Spinta passiva di Rankine</div>
+        <div class="expr">K<sub>p</sub> = (1 + sin φ) / (1 - sin φ)</div>
+      </div>
+
+      <div class="formula">
+        <div class="name">Effetto sismico pseudo-statico</div>
+        <div class="expr">θ = arctan( k<sub>h</sub> / (1 - k<sub>v</sub>) )</div>
+      </div>
+
+      <div class="formula">
+        <div class="name">Verifica a ribaltamento</div>
+        <div class="expr">FS<sub>rib</sub> = M<sub>stab</sub> / M<sub>dest</sub></div>
+      </div>
+
+      <div class="formula">
+        <div class="name">Verifica a scorrimento</div>
+        <div class="expr">FS<sub>scorr</sub> = ( μ · V + c<sub>u</sub> · B + P<sub>p</sub> ) / H</div>
+      </div>
+
+      <div class="formula">
+        <div class="name">Pressioni di contatto</div>
+        <div class="expr">q<sub>max,min</sub> = (V / B) · (1 ± 6e / B)</div>
+      </div>
+
+      <div class="formula">
+        <div class="name">Portanza</div>
+        <div class="expr">FS<sub>port</sub> = q<sub>lim</sub> / q<sub>max</sub></div>
+      </div>
+
+      <div class="formula">
+        <div class="name">Stabilita del pendio - Fellenius semplificato</div>
+        <div class="expr">FS = Σ(c · l + N' · tan φ) / ΣT</div>
+      </div>
+
+      <p class="muted">Le formule mostrate sono la sintesi dei criteri adottati nel codice. I valori finali dipendono anche dalla discretizzazione, dalla falda e dalle combinazioni di carico selezionate.</p>
+    </section>
+
+    <section id="graphs" class="panel">
+      <h2>6. Grafici e dashboard</h2>
+
+      <div class="two-col">
+        <div>
+          <h3>Grafico geometrico del muro</h3>
+          <p>Mostra base, fusto, terreno a tergo, terreno a fronte, falda e tiranti. Serve a controllare che la geometria inserita abbia senso prima di interpretare i risultati numerici.</p>
+
+          <div class="diagram">
+            <svg viewBox="0 0 520 280" xmlns="http://www.w3.org/2000/svg">
+              <rect width="520" height="280" fill="#f9fbfc" rx="14"/>
+              <rect x="90" y="210" width="250" height="26" fill="#8d9ca8"/>
+              <polygon points="170,210 170,90 205,90 225,210" fill="#718592"/>
+              <polygon points="205,210 340,210 390,90 225,90" fill="#cfbb94" opacity=".85"/>
+              <polygon points="90,210 170,210 170,170 90,170" fill="#bea178" opacity=".65"/>
+              <line x1="220" y1="135" x2="385" y2="135" stroke="#2b83ba" stroke-width="2" stroke-dasharray="6 4"/>
+              <text x="394" y="139" font-size="11" fill="#2b83ba">falda</text>
+              <line x1="305" y1="155" x2="228" y2="155" stroke="#ae3b3b" stroke-width="3"/>
+              <polygon points="228,155 242,148 242,162" fill="#ae3b3b"/>
+              <text x="312" y="150" font-size="11" fill="#ae3b3b">Pₐ</text>
+              <text x="180" y="250" font-size="12" fill="#fff" font-weight="700">fondazione</text>
+            </svg>
+          </div>
+        </div>
+
+        <div>
+          <h3>Diagrammi delle pressioni</h3>
+          <p>Il grafico delle pressioni mostra l'andamento della spinta lungo la profondita. La curva sismica e in genere piu gravosa rispetto a quella statica.</p>
+
+          <div class="diagram">
+            <svg viewBox="0 0 520 280" xmlns="http://www.w3.org/2000/svg">
+              <rect width="520" height="280" fill="#f9fbfc" rx="14"/>
+              <line x1="80" y1="40" x2="80" y2="230" stroke="#324a5e" stroke-width="2"/>
+              <line x1="80" y1="230" x2="260" y2="230" stroke="#324a5e" stroke-width="2"/>
+              <polygon points="80,40 170,230 80,230" fill="rgba(65,105,225,.28)" stroke="#4169e1" stroke-width="2"/>
+              <polyline points="80,40 196,230 80,230" fill="none" stroke="#b23c3c" stroke-width="3" stroke-dasharray="7 5"/>
+              <text x="175" y="70" font-size="12" fill="#4169e1">statica</text>
+              <text x="205" y="110" font-size="12" fill="#b23c3c">sismica</text>
+              <text x="56" y="34" font-size="11" fill="#324a5e">z</text>
+              <text x="250" y="248" font-size="11" fill="#324a5e">σh</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div>
+          <h3>KPI iniziali</h3>
+          <p>La dashboard mostra subito gli indicatori piu importanti:</p>
+          <ul>
+            <li><code>FS Ribaltamento</code></li>
+            <li><code>FS Scorrimento</code></li>
+            <li><code>FS Portanza</code></li>
+            <li><code>q_max / q_amm</code></li>
+            <li><code>FS Pendio</code> se la verifica e attiva</li>
+          </ul>
+        </div>
+
+        <div>
+          <h3>Come leggere i risultati</h3>
+          <ul>
+            <li><span class="flag good">OK</span> significa che il rapporto e favorevole rispetto al limite usato nella dashboard.</li>
+            <li><span class="flag.warn">ALTO</span> indica un superamento o una condizione da approfondire.</li>
+            <li><span class="flag.bad">KO</span> indica una verifica non soddisfatta o critica.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="slope" class="panel">
+      <h2>7. Stabilita del pendio</h2>
+      <p>Se l'opzione pendio e attiva, l'app costruisce un profilo semplificato e ricerca la superficie di scorrimento circolare piu gravosa. Il risultato viene mostrato in forma grafica e numerica.</p>
+
+      <div class="diagram">
+        <svg viewBox="0 0 620 320" xmlns="http://www.w3.org/2000/svg">
+          <rect width="620" height="320" fill="#f9fbfc" rx="14"/>
+          <polygon points="70,255 250,105 470,105 470,255" fill="#ceb488" opacity=".78" stroke="#82653a" stroke-width="2"/>
+          <path d="M85 242 Q 215 110 355 138 Q 430 158 455 232" fill="none" stroke="#0f766e" stroke-width="4"/>
+          <circle cx="320" cy="52" r="7" fill="#0f766e"/>
+          <text x="333" y="56" font-size="12" fill="#0f766e">centro cerchio critico</text>
+          <line x1="250" y1="105" x2="470" y2="105" stroke="#324a5e" stroke-width="2" stroke-dasharray="5 4"/>
+          <text x="474" y="109" font-size="11" fill="#324a5e">berma</text>
+          <text x="140" y="155" font-size="12" fill="#324a5e">pendio</text>
+          <text x="210" y="230" font-size="12" fill="#0f766e">superficie critica</text>
+        </svg>
+      </div>
+
+      <p class="muted">Questa funzione e utile per una valutazione preliminare e comparativa. In presenza di opere importanti o casi complessi, la verifica globale deve essere confermata con strumenti geotecnici specialistici e modelli piu avanzati.</p>
+    </section>
+
+    <section id="tips" class="panel">
+      <h2>8. Consigli operativi</h2>
+      <div class="cards">
+        <div class="card">
+          <h3>Controlla sempre la geometria</h3>
+          <p>Se il grafico del muro sembra incoerente, probabilmente anche i risultati numerici lo saranno.</p>
+        </div>
+        <div class="card">
+          <h3>Usa la stratigrafia in modo coerente</h3>
+          <p>Gli strati devono riflettere il profilo reale del terreno e non essere valori medi troppo generici.</p>
+        </div>
+        <div class="card">
+          <h3>Confronta statico e sismico</h3>
+          <p>La combinazione sismica puo governare una verifica diversa rispetto a quella statica.</p>
+        </div>
+        <div class="card">
+          <h3>Verifica q_max / q_amm</h3>
+          <p>Anche con FS portanza accettabile, un superamento della pressione di riferimento merita approfondimento progettuale.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
 
 <div class="footer">
-  Documentazione sintetica del progetto Muro di Sostegno.
+  Documentazione utente e tecnica dell'app Muro di Sostegno.
 </div>
+
 </body>
 </html>
