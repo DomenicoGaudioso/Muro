@@ -583,7 +583,7 @@ def create_pdf_report(data: Dict[str, Any]) -> bytes:
         "autorizzativo."
     )
 
-    buf = io.BytesIO()
-    pdf.output(buf)
-    buf.seek(0)
-    return buf.read()
+    pdf_bytes = pdf.output()
+    if isinstance(pdf_bytes, str):
+        return pdf_bytes.encode('latin-1', errors='ignore')
+    return bytes(pdf_bytes)

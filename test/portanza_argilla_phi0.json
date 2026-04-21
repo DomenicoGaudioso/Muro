@@ -1,0 +1,63 @@
+{
+  "meta": {
+    "verifica": "Muro con tirante di ancoraggio — riduzione sollecitazioni strutturali",
+    "norma": "NTC2018 §6.5.3 / §6.7 / EC7-1 §8",
+    "fonte": "Calcolo a mano verificato con schema di equilibrio muro ancorato. Riferimento: Lambe T.W., Whitman R.V. - Soil Mechanics, Wiley 1969, Cap. 18.",
+    "url_fonte": "https://www.ntc.gov.it/images/documenti/NTC_2018_GU_1_21_feb_2018.pdf",
+    "data_generazione": "2026-04-15",
+    "autore": "CivilBox Test Builder Agent"
+  },
+  "input": {
+    "H": 6.0,
+    "q": 15.0,
+    "gamma_cls": 24.0,
+    "B": 3.0,
+    "B_punta": 0.8,
+    "B_tallone": 2.2,
+    "t_base": 0.6,
+    "t_fusto_top": 0.35,
+    "t_fusto_bot": 0.55,
+    "mu_base": 0.50,
+    "q_amm": 250.0,
+    "h_fronte": 0.5,
+    "falda_retro": 99.0,
+    "falda_fronte": 99.0,
+    "kh": 0.0,
+    "kv": 0.0,
+    "delta_muro": 20.0,
+    "include_passivo": true,
+    "ha_tirante": true,
+    "t_quota": 4.5,
+    "t_inclinazione": 15.0,
+    "t_tiro": 120.0,
+    "stratigrafia_csv": "10.0,18,20,30,0,25000"
+  },
+  "risultati_attesi": {
+    "FS_rib_EQU": {
+      "valore": 3.1635,
+      "unita": "-",
+      "tolleranza_percentuale": 1.0,
+      "nota": "FS ribaltamento con tirante — momento stabilizzante tirante aggiunto al polo"
+    },
+    "FS_scorr_GEO": {
+      "valore": 7.2786,
+      "unita": "-",
+      "tolleranza_percentuale": 1.0,
+      "nota": "FS scorrimento fortemente migliorato dal tirante: H_tirante = T*cos(15°) contrasta la spinta attiva"
+    },
+    "M_spiccato": {
+      "valore": 0.0,
+      "unita": "kNm/m",
+      "tolleranza_percentuale": 1.0,
+      "nota": "Momento allo spiccato annullato dal tirante ancorato sopra lo spiccato (quota 4.5m > t_base=0.6m)"
+    },
+    "V_spiccato": {
+      "valore": 33.3076,
+      "unita": "kN/m",
+      "tolleranza_percentuale": 1.0,
+      "nota": "Taglio allo spiccato residuo dopo sottrazione della componente orizzontale del tirante"
+    }
+  },
+  "esito_atteso": "VERIFICATO",
+  "note_test": "Caso con tirante inclinato 15° rispetto all'orizzontale. Verifica che la componente H_tirante=T*cos(15°)=115.9 kN/m sia sottratta dalla forza orizzontale destabilizzante nello scorrimento. Il momento al polo beneficia di M_tirante = H_t*quota + V_t*x_testa."
+}

@@ -1,0 +1,50 @@
+{
+  "meta": {
+    "verifica": "Ribaltamento NON VERIFICATO — muro sottodimensionato",
+    "norma": "NTC2018 §6.5.3 (EQU)",
+    "fonte": "Caso costruito deliberatamente con geometria critica: B/H < 0.4, terreno leggero. Basato su limiti geometrici della teoria di Rankine.",
+    "url_fonte": "https://www.ntc.gov.it/images/documenti/NTC_2018_GU_1_21_feb_2018.pdf",
+    "data_generazione": "2026-04-15",
+    "autore": "CivilBox Test Builder Agent"
+  },
+  "input": {
+    "H": 4.0,
+    "q": 30.0,
+    "gamma_cls": 24.0,
+    "B": 1.6,
+    "B_punta": 0.3,
+    "B_tallone": 1.3,
+    "t_base": 0.3,
+    "t_fusto_top": 0.25,
+    "t_fusto_bot": 0.3,
+    "mu_base": 0.45,
+    "q_amm": 200.0,
+    "h_fronte": 0.0,
+    "falda_retro": 1.5,
+    "falda_fronte": 99.0,
+    "kh": 0.0,
+    "kv": 0.0,
+    "delta_muro": 20.0,
+    "include_passivo": false,
+    "ha_tirante": false,
+    "stratigrafia_csv": "10.0,17,19,28,0,20000"
+  },
+  "risultati_attesi": {
+    "FS_rib_EQU": {
+      "valore_limite": 1.0,
+      "condizione": "minore_di",
+      "unita": "-",
+      "tolleranza_percentuale": 5.0,
+      "nota": "FS ribaltamento atteso < 1.0 — verifica NON SODDISFATTA. Geometria intenzionalmente insufficiente."
+    },
+    "FS_scorr_GEO": {
+      "valore_limite": 1.0,
+      "condizione": "minore_di",
+      "unita": "-",
+      "tolleranza_percentuale": 5.0,
+      "nota": "FS scorrimento atteso < 1.0 — falda alta e nessun passivo. Verifica NON SODDISFATTA."
+    }
+  },
+  "esito_atteso": "NON VERIFICATO",
+  "note_test": "Caso patologico: muro troppo snello (B=1.6m, H=4m → B/H=0.4), falda alta a 1.5m, sovraccarico elevato 30 kPa, senza passivo. Serve a verificare che il codice segnali correttamente la non conformità e mostri i warning."
+}
