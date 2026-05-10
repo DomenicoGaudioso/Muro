@@ -13,6 +13,145 @@ from datetime import date
 from pathlib import Path
 from typing import Dict, Any
 
+
+def _fig_to_png_bytes(fig) -> bytes:
+    import matplotlib.pyplot as plt
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=180, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+    buf.seek(0)
+    return buf.read()
+
+
+def _plot_geometria_matplotlib(d):
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Polygon
+
+    fig, ax = plt.subplots(figsize=(8.8, 5.0))
+    h_tot = d.t_base + d.H
+    xf = d.B_punta
+    xft = xf + d.t_fusto_bot
+    wall_xy = [
+        (0, 0),
+        (d.B, 0),
+        (d.B, d.t_base),
+        (xft, d.t_base),
+        (xf + d.t_fusto_top, h_tot),
+        (xf, h_tot),
+        (xf, d.t_base),
+        (0, d.t_base),
+    ]
+    ax.add_patch(Polygon(wall_xy, closed=True, facecolor="#d1d5db", edgecolor="#111827", linewidth=1.4, label="Muro in cls"))
+    ax.add_patch(
+        Polygon(
+            [(xft, d.t_base), (d.B, d.t_base), (d.B + 2.0, h_tot), (xft, h_tot)],
+            closed=True,
+            facecolor="#c7a56b",
+            edgecolor="#7c4a03",
+            alpha=0.55,
+            label="Terreno a tergo",
+        )
+    )
+    if d.h_fronte > 0:
+        hf = min(d.h_fronte, d.H)
+        ax.add_patch(
+            Polygon(
+                [(0, d.t_base), (xf, d.t_base), (xf, d.t_base + hf), (0, d.t_base + hf)],
+                closed=True,
+                facecolor="#a16207",
+                edgecolor="#713f12",
+                alpha=0.35,
+                label="Terreno a fronte",
+            )
+        )
+    if d.falda_retro < d.H:
+        y_falda = d.t_base + d.falda_retro
+        ax.fill_between([xft, d.B + 2.0], y_falda, h_tot, color="#38bdf8", alpha=0.20, label="Zona satura")
+        ax.plot([xft, d.B + 2.0], [y_falda, y_falda], color="#0369a1", linestyle="--", linewidth=1.2)
+    if d.ha_tirante:
+        x_start = xf + d.t_fusto_bot
+        y_start = d.t_base + d.t_quota
+        alpha_rad = math.radians(d.t_inclinazione)
+        x_end = x_start + 2.0 * math.cos(alpha_rad)
+        y_end = y_start - 2.0 * math.sin(alpha_rad)
+        ax.plot([x_start, x_end], [y_start, y_end], color="#991b1b", linestyle="--", marker="o", linewidth=1.5, label="Tirante")
+    ax.set_title("Schema geometrico del muro")
+    ax.set_xlabel("x [m]")
+    ax.set_ylabel("z [m]")
+    ax.set_aspect("equal", adjustable="box")
+    ax.grid(True, color="#e5e7eb", linewidth=0.8)
+    ax.legend(loc="upper left", fontsize=8)
+    ax.set_xlim(-0.3, d.B + 2.3)
+    ax.set_ylim(-0.2, h_tot + 0.4)
+    return _fig_to_png_bytes(fig)
+
+
+def _plot_pressioni_matplotlib(r: Dict[str, Any]) -> bytes:
+    import matplotlib.pyplot as plt
+
+    st_res = r["statico"]
+    se = r["sismico"]
+    has_passive = st_res["Pp"] > 0 or se["Pp"] > 0
+    fig, axes = plt.subplots(1, 2 if has_passive else 1, figsize=(9.5, 4.8), squeeze=False)
+    ax = axes[0][0]
+    ax.plot(st_res["sig_a"], st_res["z_a"], color="#1d4ed8", linewidth=1.7, label="Attiva statica")
+    ax.fill_betweenx(st_res["z_a"], 0, st_res["sig_a"], color="#bfdbfe", alpha=0.55)
+    ax.plot(se["sig_a"], se["z_a"], color="#991b1b", linewidth=1.5, linestyle="--", label="Attiva sismica")
+    ax.set_title("Pressioni attive a tergo")
+    ax.set_xlabel("p [kPa]")
+    ax.set_ylabel("z [m]")
+    ax.invert_yaxis()
+    ax.grid(True, color="#e5e7eb", linewidth=0.8)
+    ax.legend(fontsize=8)
+    if has_passive:
+        axp = axes[0][1]
+        axp.plot(st_res["sig_p"], st_res["z_p"], color="#166534", linewidth=1.7, label="Passiva statica")
+        axp.fill_betweenx(st_res["z_p"], 0, st_res["sig_p"], color="#bbf7d0", alpha=0.50)
+        axp.plot(se["sig_p"], se["z_p"], color="#b45309", linewidth=1.5, linestyle="--", label="Passiva sismica")
+        axp.set_title("Pressioni passive a fronte")
+        axp.set_xlabel("p [kPa]")
+        axp.set_ylabel("z [m]")
+        axp.invert_yaxis()
+        axp.grid(True, color="#e5e7eb", linewidth=0.8)
+        axp.legend(fontsize=8)
+    fig.tight_layout()
+    return _fig_to_png_bytes(fig)
+
+
+def _plot_pendio_matplotlib(d, pendio: Dict[str, Any]) -> bytes:
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Polygon
+    import numpy as np
+
+    fig, ax = plt.subplots(figsize=(8.8, 5.0))
+    x_prof, y_prof = pendio["profilo"]
+    ground = [(float(x_prof[0]), 0.0), *[(float(x), float(y)) for x, y in zip(x_prof, y_prof)], (float(x_prof[-1]), 0.0)]
+    ax.add_patch(Polygon(ground, closed=True, facecolor="#c7a56b", edgecolor="#7c4a03", alpha=0.55, label="Pendio"))
+    water_y = d.pendio_H - d.falda_retro
+    if 0 < water_y < d.pendio_H:
+        ax.plot([0, float(x_prof[-1])], [water_y, water_y], color="#0369a1", linestyle="--", linewidth=1.2, label="Falda")
+    for label, color in [("statico", "#0f766e"), ("sismico", "#b45309")]:
+        result = pendio.get(label)
+        if not result:
+            continue
+        cx, cy = result["center"]
+        radius = result["radius"]
+        xs = np.linspace(result["x_left"], result["x_right"], 220)
+        ys = cy - np.sqrt(np.maximum(radius**2 - (xs - cx) ** 2, 0.0))
+        ax.plot(xs, ys, color=color, linewidth=2.0, label=f"Superficie critica {label}")
+        ax.scatter([cx], [cy], color=color, s=22, label=f"Centro {label}")
+    ax.set_title("Stabilita globale del pendio")
+    ax.set_xlabel("x [m]")
+    ax.set_ylabel("z [m]")
+    ax.set_aspect("equal", adjustable="box")
+    ax.grid(True, color="#e5e7eb", linewidth=0.8)
+    ax.legend(loc="best", fontsize=8)
+    ax.set_xlim(-0.2, float(x_prof[-1]) + 0.5)
+    ax.set_ylim(-0.2, max(float(max(y_prof)), d.pendio_H) + 0.8)
+    return _fig_to_png_bytes(fig)
+
+
 # ---------------------------------------------------------------------------
 # WORD REPORT
 # ---------------------------------------------------------------------------
@@ -123,12 +262,6 @@ def create_word_report(data: Dict[str, Any]) -> bytes:
             pendio_beta=data.get("pendio_beta", 26.0),
             pendio_berma=data.get("pendio_berma", 6.0),
         )
-
-    def _plot_png_bytes(fig, width=1100, height=700):
-        import plotly.io as pio
-
-        fig.update_layout(font=dict(color="#000000"), paper_bgcolor="white", plot_bgcolor="white")
-        return pio.to_image(fig, format="png", width=width, height=height, scale=2)
 
     def _aggiungi_immagine(doc, titolo, png_bytes, width_cm=16.0):
         _aggiungi_heading2(doc, titolo)
@@ -306,29 +439,27 @@ def create_word_report(data: Dict[str, Any]) -> bytes:
 
     _aggiungi_heading2(doc, "1.3.6 Elaborati grafici")
     try:
-        from src import figura_geometria, figura_output, figura_pendio
-
         dati_muro = _dati_muro()
         _aggiungi_immagine(
             doc,
             "Figura 1 - Schema geometrico, terreno e falda",
-            _plot_png_bytes(figura_geometria(dati_muro)),
+            _plot_geometria_matplotlib(dati_muro),
         )
         _aggiungi_immagine(
             doc,
             "Figura 2 - Diagrammi delle pressioni attive e passive",
-            _plot_png_bytes(figura_output(r)),
+            _plot_pressioni_matplotlib(r),
         )
         if data.get("pendio"):
             _aggiungi_immagine(
                 doc,
                 "Figura 3 - Superficie critica per stabilita globale",
-                _plot_png_bytes(figura_pendio(dati_muro, data["pendio"])),
+                _plot_pendio_matplotlib(dati_muro, data["pendio"]),
             )
     except Exception as exc:
         doc.add_paragraph(
-            "Immagini non disponibili in questa esecuzione. Installare `kaleido` per esportare "
-            f"automaticamente i plot Plotly nel report. Dettaglio tecnico: {exc}"
+            "Immagini non disponibili in questa esecuzione. Verificare l'installazione di matplotlib. "
+            f"Dettaglio tecnico: {exc}"
         )
 
     doc.add_paragraph()
@@ -606,19 +737,15 @@ def create_pdf_report(data: Dict[str, Any]) -> bytes:
             alt_row = not alt_row
         pdf.ln(2)
 
-    def _plot_png_file(fig, width=1100, height=700):
-        import plotly.io as pio
-
-        fig.update_layout(font=dict(color="#000000"), paper_bgcolor="white", plot_bgcolor="white")
-        png = pio.to_image(fig, format="png", width=width, height=height, scale=2)
+    def _plot_png_file(png: bytes):
         tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
         tmp.write(png)
         tmp.close()
         return tmp.name
 
-    def _immagine_pdf(pdf, titolo, fig):
+    def _immagine_pdf(pdf, titolo, png: bytes):
         _sottosezione(pdf, titolo)
-        path = _plot_png_file(fig)
+        path = _plot_png_file(png)
         try:
             pdf.image(path, x=20, w=170)
             pdf.ln(3)
@@ -695,7 +822,7 @@ def create_pdf_report(data: Dict[str, Any]) -> bytes:
     )
 
     try:
-        from src import DatiMuro, DEFAULT_STRAT, figura_geometria, figura_output, figura_pendio
+        from src import DatiMuro, DEFAULT_STRAT
 
         dati_muro = DatiMuro(
             H=data["H"],
@@ -727,13 +854,13 @@ def create_pdf_report(data: Dict[str, Any]) -> bytes:
             pendio_berma=data.get("pendio_berma", 6.0),
         )
         _sottosezione(pdf, "1.4 Elaborati grafici")
-        _immagine_pdf(pdf, "Figura 1 - Schema geometrico, terreno e falda", figura_geometria(dati_muro))
-        _immagine_pdf(pdf, "Figura 2 - Diagrammi delle pressioni attive e passive", figura_output(r))
+        _immagine_pdf(pdf, "Figura 1 - Schema geometrico, terreno e falda", _plot_geometria_matplotlib(dati_muro))
+        _immagine_pdf(pdf, "Figura 2 - Diagrammi delle pressioni attive e passive", _plot_pressioni_matplotlib(r))
         if data.get("pendio"):
-            _immagine_pdf(pdf, "Figura 3 - Superficie critica per stabilita globale", figura_pendio(dati_muro, data["pendio"]))
+            _immagine_pdf(pdf, "Figura 3 - Superficie critica per stabilita globale", _plot_pendio_matplotlib(dati_muro, data["pendio"]))
     except Exception as exc:
         pdf.set_font('Helvetica', '', 8)
-        pdf.multi_cell(0, 5, f"Immagini non disponibili in questa esecuzione. Installare kaleido. Dettaglio tecnico: {exc}")
+        pdf.multi_cell(0, 5, f"Immagini non disponibili in questa esecuzione. Verificare matplotlib. Dettaglio tecnico: {exc}")
         pdf.ln(2)
 
     _sottosezione(pdf, "1.5 Tabelle di calcolo - verifiche geotecniche")
