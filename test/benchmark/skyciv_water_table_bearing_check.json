@@ -1,0 +1,78 @@
+{
+  "meta": {
+    "id": "skyciv_water_table_bearing_check",
+    "titolo": "Benchmark SkyCiv-style - falda alta e controllo portanza/scorrimento",
+    "software_ispirazione": "SkyCiv Retaining Wall",
+    "scopo": "Validare un caso con falda a tergo, incremento della spinta, controllo della portanza e stabilita globale critica nel report.",
+    "riferimenti_benchmark": [
+      "SkyCiv Retaining Wall: detailed PDF calculation report with references and step-by-step checks",
+      "NTC 2018 Capitolo 6.5 - pressioni idrauliche e verifiche opere di sostegno",
+      "EN 1997-1 Sezione 9 - groundwater pressures and limit states"
+    ],
+    "data_generazione": "2026-05-10",
+    "autore": "Codex"
+  },
+  "input": {
+    "H": 5.0,
+    "q": 12.0,
+    "gamma_cls": 24.0,
+    "B": 3.6,
+    "B_punta": 1.0,
+    "B_tallone": 2.6,
+    "t_base": 0.5,
+    "t_fusto_top": 0.3,
+    "t_fusto_bot": 0.55,
+    "mu_base": 0.5,
+    "q_amm": 220.0,
+    "h_fronte": 0.6,
+    "falda_retro": 2.0,
+    "falda_fronte": 99.0,
+    "kh": 0.0,
+    "kv": 0.0,
+    "delta_muro": 20.0,
+    "include_passivo": true,
+    "ha_tirante": false,
+    "t_quota": 0.0,
+    "t_inclinazione": 0.0,
+    "t_tiro": 0.0,
+    "analizza_pendio": true,
+    "pendio_H": 5.0,
+    "pendio_beta": 25.0,
+    "pendio_berma": 6.0,
+    "stratigrafia_csv": "2.5,18,20,31,0,28000\n6.0,19,21,33,0,35000"
+  },
+  "risultati_attesi": {
+    "FS_rib_EQU": {
+      "valore": 2.7123,
+      "unita": "-",
+      "tolleranza_percentuale": 1.0
+    },
+    "FS_scorr_GEO": {
+      "valore": 1.3986,
+      "unita": "-",
+      "tolleranza_percentuale": 1.0
+    },
+    "FS_portanza_GEO": {
+      "valore": 1.5568,
+      "unita": "-",
+      "tolleranza_percentuale": 1.0
+    },
+    "qmax_GEO": {
+      "valore": 95.9284,
+      "unita": "kPa",
+      "tolleranza_percentuale": 1.0
+    },
+    "Pa_GEO": {
+      "valore": 129.3175,
+      "unita": "kN/m",
+      "tolleranza_percentuale": 1.0
+    },
+    "FS_pendio_statico": {
+      "valore": 0.8792,
+      "unita": "-",
+      "tolleranza_percentuale": 1.0
+    }
+  },
+  "esito_atteso": "STABILITA_GLOBALE_CRITICA",
+  "note_test": "Caso benchmark per controllare che l'app segnali correttamente una stabilita globale non soddisfatta pur con verifiche locali ancora accettabili."
+}

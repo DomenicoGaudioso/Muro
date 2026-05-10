@@ -1,0 +1,83 @@
+{
+  "meta": {
+    "id": "asdip_cantilever_surcharge_seismic",
+    "titolo": "Benchmark ASDIP-style - muro a mensola con sovraccarico e pseudo-statica",
+    "software_ispirazione": "ASDIP RETAIN",
+    "scopo": "Validare un caso con sovraccarico e azione sismica pseudo-statica, con attenzione alle combinazioni governanti e ai risultati per report dettagliato.",
+    "riferimenti_benchmark": [
+      "ASDIP RETAIN: stability checks, pressure/force graphics, load-combination reporting",
+      "Mononobe-Okabe per spinta sismica pseudo-statica",
+      "NTC 2018 Capitoli 6.5 e 7.11"
+    ],
+    "data_generazione": "2026-05-10",
+    "autore": "Codex"
+  },
+  "input": {
+    "H": 5.5,
+    "q": 20.0,
+    "gamma_cls": 24.0,
+    "B": 3.8,
+    "B_punta": 1.0,
+    "B_tallone": 2.8,
+    "t_base": 0.55,
+    "t_fusto_top": 0.3,
+    "t_fusto_bot": 0.6,
+    "mu_base": 0.52,
+    "q_amm": 280.0,
+    "h_fronte": 0.5,
+    "falda_retro": 99.0,
+    "falda_fronte": 99.0,
+    "kh": 0.12,
+    "kv": 0.04,
+    "delta_muro": 18.0,
+    "include_passivo": true,
+    "ha_tirante": false,
+    "t_quota": 0.0,
+    "t_inclinazione": 0.0,
+    "t_tiro": 0.0,
+    "analizza_pendio": true,
+    "pendio_H": 5.5,
+    "pendio_beta": 26.0,
+    "pendio_berma": 6.0,
+    "stratigrafia_csv": "3.0,18,20,30,0,25000\n6.0,19,21,34,0,40000"
+  },
+  "risultati_attesi": {
+    "FS_rib_EQU": {
+      "valore": 3.2824,
+      "unita": "-",
+      "tolleranza_percentuale": 1.0
+    },
+    "FS_scorr_GEO": {
+      "valore": 2.0327,
+      "unita": "-",
+      "tolleranza_percentuale": 1.0
+    },
+    "FS_portanza_GEO": {
+      "valore": 1.935,
+      "unita": "-",
+      "tolleranza_percentuale": 1.0
+    },
+    "qmax_GEO": {
+      "valore": 134.1619,
+      "unita": "kPa",
+      "tolleranza_percentuale": 1.0
+    },
+    "Pa_GEO": {
+      "valore": 133.126,
+      "unita": "kN/m",
+      "tolleranza_percentuale": 1.0
+    },
+    "FS_portanza_sismico_kv_plus": {
+      "valore": 1.0944,
+      "unita": "-",
+      "tolleranza_percentuale": 1.0
+    },
+    "FS_pendio_statico": {
+      "valore": 1.273,
+      "unita": "-",
+      "tolleranza_percentuale": 1.0
+    }
+  },
+  "esito_atteso": "VERIFICATO_CON_ATTENZIONE",
+  "note_test": "Caso utile a verificare che il report evidenzi la combinazione sismica governante per la portanza e che mantenga leggibili pressioni, forze e sintesi."
+}
