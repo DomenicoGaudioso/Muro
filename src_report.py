@@ -70,14 +70,33 @@ def create_word_report(data: Dict[str, Any]) -> bytes:
         par = cell.paragraphs[0]
         run = par.add_run()
         if fs_value >= limite:
-            run.text = f"✅ {fs_value:.3f}"
+            run.text = f"OK {fs_value:.3f}"
             run.font.color.rgb = RGBColor(0x27, 0xAE, 0x60)
         else:
-            run.text = f"❌ {fs_value:.3f}"
+            run.text = f"NO {fs_value:.3f}"
             run.font.color.rgb = RGBColor(0xE7, 0x4C, 0x3C)
         run.bold = True
 
     doc = Document()
+    r = data['risultati']
+    warnings = data.get("warnings", [])
+    q_ratio_statico = r['statico']['qmax'] / max(data['q_amm'], 1e-9)
+
+    def _esito_testo(valore, limite=1.0, inverse=False):
+        ok = valore <= limite if inverse else valore >= limite
+        return "VERIFICATO" if ok else "NON VERIFICATO"
+
+    def _aggiungi_tabella_kv(doc, righe):
+        tabella = doc.add_table(rows=1, cols=2)
+        tabella.style = 'Table Grid'
+        tabella.rows[0].cells[0].text = "Voce"
+        tabella.rows[0].cells[1].text = "Valore"
+        _intestazione_tabella(tabella)
+        for label, value in righe:
+            row = tabella.add_row().cells
+            row[0].text = str(label)
+            row[1].text = str(value)
+        return tabella
 
     # Margini
     for section in doc.sections:
@@ -107,6 +126,34 @@ def create_word_report(data: Dict[str, Any]) -> bytes:
         "abilitato prima di essere utilizzati per qualsiasi scopo progettuale o costruttivo."
     )
     doc.add_paragraph()
+
+    _aggiungi_heading1(doc, "0. SINTESI ESECUTIVA")
+    _aggiungi_tabella_kv(
+        doc,
+        [
+            ("Ribaltamento statico EQU", f"{_esito_testo(r['st_EQU']['FS_rib'])} - FS = {r['st_EQU']['FS_rib']:.3f}"),
+            ("Scorrimento statico GEO", f"{_esito_testo(r['statico']['FS_scorr'])} - FS = {r['statico']['FS_scorr']:.3f}"),
+            ("Portanza statica GEO", f"{_esito_testo(r['statico']['FS_portanza'])} - FS = {r['statico']['FS_portanza']:.3f}"),
+            ("Pressione massima / q_amm", f"{_esito_testo(q_ratio_statico, 1.0, inverse=True)} - {q_ratio_statico:.3f}"),
+            ("Criticita automatiche", f"{len(warnings)}"),
+        ],
+    )
+    if warnings:
+        _aggiungi_heading2(doc, "Criticita da esaminare")
+        for warning in warnings:
+            doc.add_paragraph(str(warning), style="List Bullet")
+
+    _aggiungi_heading2(doc, "Riferimenti e perimetro del modello")
+    for ref in [
+        "NTC 2018, Capitolo 6.5 - opere di sostegno: azioni, drenaggio, riempimenti e verifiche del complesso opera-terreno.",
+        "Circolare 21/01/2019 n. 7 C.S.LL.PP., C6.5.3.1.1: SLU GEO per ribaltamento, scorrimento, carico limite e stabilita globale.",
+        "EN 1997-1, Sezione 9: stati limite delle strutture di sostegno, pressioni idrauliche, scorrimento, ribaltamento e portanza.",
+    ]:
+        doc.add_paragraph(ref, style="List Bullet")
+    doc.add_paragraph(
+        "La relazione documenta le verifiche automatiche principali; non sostituisce la relazione geologica, "
+        "la scelta dei parametri caratteristici ne la verifica indipendente del progettista."
+    )
 
     # ---------------------------------------------------------------------------
     # 2. DATI DI INPUT
@@ -199,14 +246,31 @@ def create_word_report(data: Dict[str, Any]) -> bytes:
             for i, val in enumerate(row_data):
                 row[i].text = str(val)
 
+    _aggiungi_heading2(doc, "1.5 Stratigrafia adottata")
+    strat_df = r.get("stratigrafia")
+    if strat_df is not None and not strat_df.empty:
+        t_strat = doc.add_table(rows=1, cols=6)
+        t_strat.style = 'Table Grid'
+        for i, header in enumerate(["Strato", "Spessore [m]", "gamma dry", "gamma sat", "phi [deg]", "cu [kPa]"]):
+            t_strat.rows[0].cells[i].text = header
+        _intestazione_tabella(t_strat)
+        for idx, row_data in strat_df.iterrows():
+            row = t_strat.add_row().cells
+            row[0].text = str(idx + 1)
+            row[1].text = f"{row_data['spessore_m']:.2f}"
+            row[2].text = f"{row_data['gamma_dry']:.2f}"
+            row[3].text = f"{row_data['gamma_sat']:.2f}"
+            row[4].text = f"{row_data['phi_deg']:.1f}"
+            row[5].text = f"{row_data['cu_kPa']:.1f}"
+    else:
+        doc.add_paragraph("Stratigrafia non disponibile nel risultato di calcolo.")
+
     doc.add_paragraph()
 
     # ---------------------------------------------------------------------------
     # 3. VERIFICHE GEOTECNICHE
     # ---------------------------------------------------------------------------
     _aggiungi_heading1(doc, "2. VERIFICHE GEOTECNICHE — COMBINAZIONI NTC2018")
-
-    r = data['risultati']
 
     _aggiungi_heading2(doc, "2.1 Spinte sul Muro")
     t_sp = doc.add_table(rows=1, cols=4)
@@ -291,7 +355,7 @@ def create_word_report(data: Dict[str, Any]) -> bytes:
     _intestazione_tabella(t_por)
     por_rows = [
         ("q_max (Statico)", f"{r['statico']['qmax']:.2f}", "kPa", "Pressione massima (formula Navier)"),
-        ("q_min (Statico)", f"{r['statico']['qmin']:.2f}", "kPa", "Pressione minima (nucleoco centrale)"),
+        ("q_min (Statico)", f"{r['statico']['qmin']:.2f}", "kPa", "Pressione minima (nucleo centrale)"),
         ("q_lim Hansen (Statico)", f"{r['statico']['q_lim']:.2f}", "kPa", "Carico limite Brinch-Hansen"),
         ("FS_portanza (Statico)", f"{r['statico']['FS_portanza']:.3f}", "–", "FS portanza (limite ≥ 1.0)"),
         ("FS_portanza (Sismico)", f"{r['sismico']['FS_portanza']:.3f}", "–", "FS portanza sismico"),
@@ -384,10 +448,31 @@ def create_word_report(data: Dict[str, Any]) -> bytes:
 
     doc.add_paragraph()
 
+    _aggiungi_heading1(doc, "5. STABILITA GLOBALE E NOTE TECNICHE")
+    pendio = data.get("pendio")
+    if pendio and pendio.get("statico"):
+        _aggiungi_tabella_kv(
+            doc,
+            [
+                ("Metodo", "Fellenius semplificato con ricerca automatica del cerchio critico"),
+                ("FS pendio statico", f"{pendio['statico']['FS']:.3f}"),
+                ("FS pendio sismico", f"{pendio['sismico']['FS']:.3f}" if pendio.get("sismico") else "n.d."),
+                ("phi equivalente", f"{pendio['props']['phi_deg']:.1f} deg"),
+                ("cu equivalente", f"{pendio['props']['cu_kPa']:.1f} kPa"),
+            ],
+        )
+    else:
+        doc.add_paragraph("La verifica globale del pendio non e stata eseguita o non ha restituito una superficie critica valida.")
+
+    if data.get("notes"):
+        _aggiungi_heading2(doc, "Note automatiche")
+        for note in data["notes"]:
+            doc.add_paragraph(str(note), style="List Bullet")
+
     # ---------------------------------------------------------------------------
     # 6. DISCLAIMER
     # ---------------------------------------------------------------------------
-    _aggiungi_heading1(doc, "5. DISCLAIMER")
+    _aggiungi_heading1(doc, "6. DISCLAIMER")
     p_disc = doc.add_paragraph(
         "I risultati prodotti dall'applicazione CivilBox — Muro di Sostegno sono elaborati "
         "automaticamente sulla base dei dati inseriti dall'utente. L'applicazione non sostituisce "
@@ -490,6 +575,8 @@ def create_pdf_report(data: Dict[str, Any]) -> bytes:
     pdf.add_page()
 
     r = data['risultati']
+    warnings = data.get("warnings", [])
+    q_ratio_statico = r['statico']['qmax'] / max(data['q_amm'], 1e-9)
 
     # Frontespizio
     _sezione(pdf, "FRONTESPIZIO")
@@ -503,6 +590,19 @@ def create_pdf_report(data: Dict[str, Any]) -> bytes:
     pdf.cell(50, 6, "Data:", ln=False)
     pdf.cell(0, 6, str(date.today()), ln=True)
     pdf.ln(4)
+
+    _sezione(pdf, "0. SINTESI ESECUTIVA")
+    _tabella(pdf,
+        ["Controllo", "Valore", "Esito"],
+        [
+            ("Ribaltamento statico EQU", f"FS {r['st_EQU']['FS_rib']:.3f}", "VERIFICATO" if r['st_EQU']['FS_rib'] >= 1.0 else "NON VERIFICATO"),
+            ("Scorrimento statico GEO", f"FS {r['statico']['FS_scorr']:.3f}", "VERIFICATO" if r['statico']['FS_scorr'] >= 1.0 else "NON VERIFICATO"),
+            ("Portanza statica GEO", f"FS {r['statico']['FS_portanza']:.3f}", "VERIFICATO" if r['statico']['FS_portanza'] >= 1.0 else "NON VERIFICATO"),
+            ("q_max / q_amm", f"{q_ratio_statico:.3f}", "VERIFICATO" if q_ratio_statico <= 1.0 else "NON VERIFICATO"),
+            ("Criticita automatiche", str(len(warnings)), "DA ESAMINARE" if warnings else "NESSUNA"),
+        ],
+        [75, 45, 50]
+    )
 
     # Dati geometrici
     _sezione(pdf, "1. DATI DI INPUT - GEOMETRIA E CARICHI")
@@ -571,8 +671,26 @@ def create_pdf_report(data: Dict[str, Any]) -> bytes:
         _esito_riga(pdf, nome_v, fs_v)
     pdf.ln(4)
 
+    pendio = data.get("pendio")
+    _sezione(pdf, "5. STABILITA GLOBALE")
+    if pendio and pendio.get("statico"):
+        _tabella(pdf,
+            ["Parametro", "Valore", "Unita"],
+            [
+                ("FS pendio statico", f"{pendio['statico']['FS']:.3f}", "-"),
+                ("FS pendio sismico", f"{pendio['sismico']['FS']:.3f}" if pendio.get("sismico") else "n.d.", "-"),
+                ("phi equivalente", f"{pendio['props']['phi_deg']:.1f}", "deg"),
+                ("cu equivalente", f"{pendio['props']['cu_kPa']:.1f}", "kPa"),
+            ],
+            [70, 45, 30]
+        )
+    else:
+        pdf.set_font('Helvetica', '', 8)
+        pdf.multi_cell(0, 5, "Verifica globale del pendio non eseguita o senza superficie critica valida.")
+        pdf.ln(2)
+
     # Disclaimer
-    _sezione(pdf, "5. DISCLAIMER")
+    _sezione(pdf, "6. DISCLAIMER")
     pdf.set_font('Helvetica', 'I', 8)
     pdf.multi_cell(
         0, 5,

@@ -50,42 +50,46 @@ DEFAULTS = {
     "pendio_berma": 6.0,
 }
 
+DESIGN_REFERENCES = [
+    "NTC 2018, Capitolo 6.5 - opere di sostegno: azioni, drenaggio, riempimenti e verifiche del complesso opera-terreno.",
+    "Circolare 21/01/2019 n. 7 C.S.LL.PP., C6.5.3.1.1: SLU GEO per ribaltamento, scorrimento, carico limite e stabilita globale.",
+    "EN 1997-1, Sezione 9: stati limite delle strutture di sostegno, pressioni idrauliche, scorrimento, ribaltamento e portanza.",
+]
+
 PREMIUM_CSS = """
 <style>
   :root {
-    --ink: #172b3a;
-    --muted: #5f6f7f;
-    --line: rgba(23, 43, 58, 0.10);
-    --cream: #f7f4ee;
-    --sea: #0f766e;
-    --gold: #b7791f;
-    --rose: #a33b3b;
+    --ink: #13202b;
+    --muted: #5b6774;
+    --line: rgba(19, 32, 43, 0.12);
+    --paper: #f6f7f8;
+    --panel: #ffffff;
+    --accent: #155e75;
+    --ok: #166534;
+    --warn: #a16207;
+    --bad: #b91c1c;
   }
   .stApp {
-    background:
-      radial-gradient(circle at top right, rgba(15,118,110,.10), transparent 28%),
-      radial-gradient(circle at top left, rgba(183,121,31,.10), transparent 24%),
-      linear-gradient(180deg, #f8f6f1 0%, #f3f6f8 100%);
+    background: linear-gradient(180deg, #f7f8fa 0%, #eef2f5 100%);
   }
   .block-container {
     padding-top: 1.4rem;
     padding-bottom: 2rem;
   }
   .hero-shell {
-    border: 1px solid rgba(255,255,255,.24);
-    background:
-      linear-gradient(135deg, rgba(16,61,76,.96) 0%, rgba(24,87,102,.94) 54%, rgba(157,108,36,.92) 100%);
+    border: 1px solid rgba(255,255,255,.22);
+    background: linear-gradient(135deg, #13202b 0%, #164e63 100%);
     color: white;
-    padding: 28px 30px;
-    border-radius: 24px;
-    box-shadow: 0 20px 48px rgba(16, 37, 49, .18);
+    padding: 24px 28px;
+    border-radius: 14px;
+    box-shadow: 0 18px 42px rgba(19, 32, 43, .16);
     margin-bottom: 1rem;
   }
   .hero-shell h1 {
     margin: 0 0 .35rem;
-    font-size: 2.2rem;
+    font-size: 2.05rem;
     line-height: 1.05;
-    letter-spacing: -.03em;
+    letter-spacing: 0;
   }
   .hero-shell p {
     margin: 0;
@@ -102,18 +106,29 @@ PREMIUM_CSS = """
   .hero-badge {
     border: 1px solid rgba(255,255,255,.18);
     background: rgba(255,255,255,.10);
-    border-radius: 999px;
+    border-radius: 8px;
     padding: .28rem .72rem;
     font-size: .78rem;
   }
   .section-card {
-    background: rgba(255,255,255,.78);
-    backdrop-filter: blur(10px);
+    background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 20px;
+    border-radius: 10px;
     padding: 1rem 1.15rem;
-    box-shadow: 0 10px 28px rgba(20, 39, 55, .05);
+    box-shadow: 0 8px 24px rgba(20, 39, 55, .05);
     margin-bottom: .85rem;
+    color: var(--ink);
+  }
+  .section-card:empty {
+    display: none;
+  }
+  .section-card h1,
+  .section-card h2,
+  .section-card h3,
+  .section-card p,
+  .section-card li,
+  .section-card span {
+    color: var(--ink);
   }
   .mini-grid {
     display: grid;
@@ -124,7 +139,7 @@ PREMIUM_CSS = """
   .mini-card {
     background: rgba(255,255,255,.12);
     border: 1px solid rgba(255,255,255,.14);
-    border-radius: 18px;
+    border-radius: 10px;
     padding: .9rem 1rem;
   }
   .mini-card .label {
@@ -139,14 +154,26 @@ PREMIUM_CSS = """
     font-weight: 700;
   }
   div[data-testid="stMetric"] {
-    background: rgba(255,255,255,.72);
+    background: #ffffff;
     border: 1px solid var(--line);
-    border-radius: 18px;
+    border-radius: 10px;
     padding: .8rem 1rem;
     box-shadow: 0 8px 20px rgba(20, 39, 55, .04);
   }
+  div[data-testid="stMetric"] * {
+    color: var(--ink) !important;
+  }
   div[data-testid="stMetricLabel"] {
-    color: var(--muted);
+    color: var(--muted) !important;
+  }
+  div[data-testid="stMetricValue"] {
+    color: var(--ink) !important;
+  }
+  div[data-testid="stMetricDelta"] {
+    color: #16a34a !important;
+  }
+  div[data-testid="stMetricDelta"] * {
+    color: #16a34a !important;
   }
   .stTabs [data-baseweb="tab-list"] {
     gap: .35rem;
@@ -154,14 +181,53 @@ PREMIUM_CSS = """
   .stTabs [data-baseweb="tab"] {
     background: rgba(255,255,255,.62);
     border: 1px solid var(--line);
-    border-radius: 999px;
+    border-radius: 8px;
     height: 42px;
     padding: 0 1rem;
   }
+  .stTabs [data-baseweb="tab"] p {
+    color: var(--ink);
+  }
   .stTabs [aria-selected="true"] {
-    background: linear-gradient(135deg, rgba(15,118,110,.95), rgba(183,121,31,.92));
+    background: #155e75;
     color: white;
     border-color: transparent;
+  }
+  .stTabs [aria-selected="true"] p {
+    color: white;
+  }
+  .reference-list {
+    margin: .35rem 0 0;
+    padding-left: 1.1rem;
+    color: var(--muted);
+    font-size: .92rem;
+  }
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: .16rem .55rem;
+    font-size: .76rem;
+    font-weight: 700;
+  }
+  .status-ok { background: #dcfce7; color: var(--ok); }
+  .status-warn { background: #fef3c7; color: var(--warn); }
+  .status-ko { background: #fee2e2; color: var(--bad); }
+  [data-testid="stMarkdownContainer"] h2,
+  [data-testid="stMarkdownContainer"] h3,
+  [data-testid="stMarkdownContainer"] p,
+  [data-testid="stMarkdownContainer"] li {
+    color: var(--ink);
+  }
+  [data-testid="stCaptionContainer"],
+  [data-testid="stCaptionContainer"] * {
+    color: var(--muted) !important;
+  }
+  .hero-shell h1,
+  .hero-shell p,
+  .hero-badge,
+  .hero-badge * {
+    color: white !important;
   }
 </style>
 """
@@ -193,32 +259,88 @@ def governing_combination(results: dict, key: str, lower_is_worse: bool = True) 
     return name, candidates[name]
 
 
+def status_label(value: float, limit: float, inverse: bool = False) -> str:
+    ok = value <= limit if inverse else value >= limit
+    return "Verificato" if ok else "Non verificato"
+
+
+def verification_overview(dati: DatiMuro, results: dict, pendio: dict | None) -> list[dict]:
+    rows = [
+        {
+            "Verifica": "Ribaltamento statico",
+            "Combinazione": "EQU",
+            "Valore": results["st_EQU"]["FS_rib"],
+            "Limite": 1.0,
+            "Esito": status_label(results["st_EQU"]["FS_rib"], 1.0),
+        },
+        {
+            "Verifica": "Scorrimento statico",
+            "Combinazione": "GEO",
+            "Valore": results["statico"]["FS_scorr"],
+            "Limite": 1.0,
+            "Esito": status_label(results["statico"]["FS_scorr"], 1.0),
+        },
+        {
+            "Verifica": "Portanza statica",
+            "Combinazione": "GEO",
+            "Valore": results["statico"]["FS_portanza"],
+            "Limite": 1.0,
+            "Esito": status_label(results["statico"]["FS_portanza"], 1.0),
+        },
+        {
+            "Verifica": "Pressione ammissibile",
+            "Combinazione": "GEO",
+            "Valore": results["statico"]["qmax"] / max(dati.q_amm, 1e-9),
+            "Limite": 1.0,
+            "Esito": status_label(results["statico"]["qmax"] / max(dati.q_amm, 1e-9), 1.0, inverse=True),
+        },
+        {
+            "Verifica": "Portanza sismica",
+            "Combinazione": "kh, kv+",
+            "Valore": results["sismico"]["FS_portanza"],
+            "Limite": 1.0,
+            "Esito": status_label(results["sismico"]["FS_portanza"], 1.0),
+        },
+    ]
+    if pendio and pendio.get("statico"):
+        rows.append(
+            {
+                "Verifica": "Stabilita globale pendio",
+                "Combinazione": "Statico",
+                "Valore": pendio["statico"]["FS"],
+                "Limite": 1.30,
+                "Esito": status_label(pendio["statico"]["FS"], 1.30),
+            }
+        )
+    return rows
+
+
 st.set_page_config(page_title="Muro di sostegno NTC", layout="wide")
 st.markdown(PREMIUM_CSS, unsafe_allow_html=True)
 
 st.markdown(
     """
     <section class="hero-shell">
-      <h1>Muro di Sostegno</h1>
-      <p>Calcolo geotecnico e strutturale con lettura progettuale piu chiara, controlli automatici e verifica dedicata della stabilita del pendio.</p>
+      <h1>Muro di sostegno</h1>
+      <p>Relazione di calcolo geotecnica con sintesi degli SLU, combinazioni governanti, pressioni di contatto e verifica globale del pendio.</p>
       <div class="hero-badges">
         <span class="hero-badge">NTC 2018</span>
-        <span class="hero-badge">Mononobe-Okabe</span>
-        <span class="hero-badge">Brinch-Hansen</span>
-        <span class="hero-badge">Fellenius semplificato</span>
+        <span class="hero-badge">Circolare 2019</span>
+        <span class="hero-badge">EC7</span>
+        <span class="hero-badge">SLU GEO / EQU</span>
       </div>
       <div class="mini-grid">
         <div class="mini-card">
-          <div class="label">Output</div>
-          <div class="value">Geo + Str + Pendio</div>
+          <div class="label">Quadro verifiche</div>
+          <div class="value">GEO + EQU</div>
         </div>
         <div class="mini-card">
-          <div class="label">Esperienza</div>
-          <div class="value">Dashboard premium</div>
+          <div class="label">Report</div>
+          <div class="value">Word + PDF</div>
         </div>
         <div class="mini-card">
-          <div class="label">Obiettivo</div>
-          <div class="value">Decisioni piu rapide</div>
+          <div class="label">Controlli</div>
+          <div class="value">Dati + esiti</div>
         </div>
       </div>
     </section>
@@ -330,6 +452,9 @@ current_input = dict(dati.__dict__)
 governing_fs_name, governing_fs_value = governing_combination(results, "FS_portanza")
 governing_q_name, governing_q_value = governing_combination(results, "qmax", lower_is_worse=False)
 pendio = analisi_stabilita_pendio(dati, results["stratigrafia"]) if dati.analizza_pendio else None
+warnings = genera_warning(dati, results)
+notes = genera_note(dati, results)
+overview_rows = verification_overview(dati, results, pendio)
 
 with st.sidebar:
     st.divider()
@@ -356,6 +481,11 @@ with st.sidebar:
         "t_quota": dati.t_quota,
         "t_inclinazione": dati.t_inclinazione,
         "t_tiro": dati.t_tiro,
+        "include_passivo": dati.include_passivo,
+        "stratigrafia_csv": dati.stratigrafia_csv,
+        "pendio": pendio,
+        "warnings": warnings,
+        "notes": notes,
         "risultati": results,
     }
     try:
@@ -405,7 +535,8 @@ with metric_col_5:
 
 tabs = st.tabs(
     [
-        "Cruscotto globale",
+        "Sintesi tecnica",
+        "Modello e verifiche",
         "Output pressioni",
         "Analisi strutturale",
         "Stabilita pendio",
@@ -415,6 +546,45 @@ tabs = st.tabs(
 )
 
 with tabs[0]:
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.subheader("Sintesi per relazione")
+    intro_left, intro_right = st.columns([1.35, 1.0])
+    with intro_left:
+        st.dataframe(overview_rows, use_container_width=True, hide_index=True)
+    with intro_right:
+        st.markdown("**Riferimenti assunti nel controllo**")
+        st.markdown(
+            "<ul class='reference-list'>"
+            + "".join(f"<li>{ref}</li>" for ref in DESIGN_REFERENCES)
+            + "</ul>",
+            unsafe_allow_html=True,
+        )
+        st.divider()
+        if warnings:
+            st.error(f"{len(warnings)} criticita automatica da esaminare prima dell'uso progettuale.")
+        else:
+            st.success("Nessuna criticita automatica nelle verifiche principali.")
+        st.caption("Il modello resta uno strumento di supporto: il giudizio tecnico e la caratterizzazione geotecnica rimangono responsabilita del progettista.")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.subheader("Combinazioni governanti")
+    g1, g2, g3 = st.columns(3)
+    with g1:
+        render_status("Portanza minima", governing_fs_value, 1.0)
+        st.caption(f"Governante: {governing_fs_name}")
+    with g2:
+        render_status("q_max / q_amm", governing_q_value / dati.q_amm, 1.0, inverse=True)
+        st.caption(f"Governante: {governing_q_name}")
+    with g3:
+        if pendio and pendio["statico"]:
+            render_status("Pendio statico", pendio["statico"]["FS"], 1.30)
+        else:
+            st.metric("Pendio statico", "n.d.")
+        st.caption("Limite indicativo usato nel cruscotto: FS >= 1.30")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+with tabs[1]:
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.subheader("Modello di calcolo")
     left, right = st.columns([1.85, 1.0])
@@ -437,13 +607,13 @@ with tabs[0]:
         st.info(f"q_max governante: {governing_q_value:.1f} kPa in {governing_q_name}.")
     st.markdown('</div>', unsafe_allow_html=True)
 
-with tabs[1]:
+with tabs[2]:
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.subheader("Pressioni sul terreno")
     st.plotly_chart(figura_output(results), use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-with tabs[2]:
+with tabs[3]:
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.subheader("Sollecitazioni strutturali allo spiccato")
     st.markdown(
@@ -464,7 +634,7 @@ with tabs[2]:
         st.info("Nessun tirante inserito. Il modello considera il solo muro a mensola.")
     st.markdown('</div>', unsafe_allow_html=True)
 
-with tabs[3]:
+with tabs[4]:
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.subheader("Verifica di stabilita del pendio")
     if not pendio or not pendio["statico"]:
@@ -504,7 +674,7 @@ with tabs[3]:
             )
     st.markdown('</div>', unsafe_allow_html=True)
 
-with tabs[4]:
+with tabs[5]:
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.subheader("Controlli di progetto")
     st.dataframe(summary_df.copy(), use_container_width=True)
@@ -525,10 +695,8 @@ with tabs[4]:
     )
     st.markdown('</div>', unsafe_allow_html=True)
 
-with tabs[5]:
+with tabs[6]:
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    warnings = genera_warning(dati, results)
-    notes = genera_note(dati, results)
     if pendio and pendio["statico"]:
         notes.append(f"FS statico pendio: {pendio['statico']['FS']:.2f}.")
     if pendio and pendio["sismico"]:
