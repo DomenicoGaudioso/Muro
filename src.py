@@ -19,7 +19,9 @@ DEFAULT_STRAT = """2.0,18,20,30,0,25000
 
 
 def integra_trapezi(y, x) -> float:
-    return float(np.trapezoid(y, x))
+    if hasattr(np, "trapezoid"):
+        return float(np.trapezoid(y, x))
+    return float(np.trapz(y, x))
 
 
 def parse_stratigrafia(csv_text: str) -> Tuple[pd.DataFrame, List[str]]:
