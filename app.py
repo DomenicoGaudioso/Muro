@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
 
+import pandas as pd
 import streamlit as st
 
 from src import (
@@ -242,7 +243,14 @@ def render_status(label: str, value: float, limit: float, inverse: bool = False)
         ok = value >= limit
         state = "OK" if ok else "KO"
         delta = value - limit
-    st.metric(label, f"{value:.2f}", delta=f"{state} ({delta:+.2f})")
+    st.dataframe(pd.DataFrame([
+        {
+            "Parametro": label,
+            "Valore": f"{value:.2f}",
+            "Limite": f"{limit:.2f}",
+            "Esito/nota": f"{state} ({delta:+.2f})",
+        }
+    ]), use_container_width=True, hide_index=True)
 
 
 def governing_combination(results: dict, key: str, lower_is_worse: bool = True) -> tuple[str, float]:
@@ -531,19 +539,11 @@ with metric_col_5:
     if pendio and pendio["statico"]:
         render_status("FS Pendio", pendio["statico"]["FS"], 1.30)
     else:
-        st.metric("FS Pendio", "n.d.", delta="attiva modulo")
+        st.dataframe(pd.DataFrame([
+            {"Parametro": "FS Pendio", "Valore": "n.d.", "Limite": "1.30", "Esito/nota": "attiva modulo"}
+        ]), use_container_width=True, hide_index=True)
 
-tabs = st.tabs(
-    [
-        "Sintesi tecnica",
-        "Modello e verifiche",
-        "Output pressioni",
-        "Analisi strutturale",
-        "Stabilita pendio",
-        "Report e controlli",
-        "Note",
-    ]
-)
+tabs = [st.container() for _ in range(7)]
 
 with tabs[0]:
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
@@ -580,7 +580,9 @@ with tabs[0]:
         if pendio and pendio["statico"]:
             render_status("Pendio statico", pendio["statico"]["FS"], 1.30)
         else:
-            st.metric("Pendio statico", "n.d.")
+            st.dataframe(pd.DataFrame([
+                {"Parametro": "Pendio statico", "Valore": "n.d.", "Limite": "1.30", "Esito/nota": "-"}
+            ]), use_container_width=True, hide_index=True)
         st.caption("Limite indicativo usato nel cruscotto: FS >= 1.30")
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -647,10 +649,14 @@ with tabs[4]:
             if pendio["sismico"]:
                 render_status("FS sismico pendio", pendio["sismico"]["FS"], 1.10)
             else:
-                st.metric("FS sismico pendio", "n.d.")
+                st.dataframe(pd.DataFrame([
+                    {"Parametro": "FS sismico pendio", "Valore": "n.d.", "Limite": "1.10", "Esito/nota": "-"}
+                ]), use_container_width=True, hide_index=True)
         with c:
             props = pendio["props"]
-            st.metric("phi equivalente", f"{props['phi_deg']:.1f} deg", delta=f"cu {props['cu_kPa']:.1f} kPa")
+            st.dataframe(pd.DataFrame([
+                {"Parametro": "phi equivalente", "Valore": f"{props['phi_deg']:.1f}", "Unita": "deg", "Esito/nota": f"cu {props['cu_kPa']:.1f} kPa"}
+            ]), use_container_width=True, hide_index=True)
 
         st.plotly_chart(figura_pendio(dati, pendio), use_container_width=True)
 
